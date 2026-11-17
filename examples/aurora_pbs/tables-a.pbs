@@ -1,18 +1,19 @@
 #!/bin/bash -l
-#PBS -A neutrinoGPU::WireCell_aurora
+# Set before use: REPO (this repository), LISTS (folder of <sample>-merged-cafs.txt), DATA, OUT; and -A to your allocation.
+#PBS -A <project>::<suballocation>
 #PBS -q debug
 #PBS -l select=1
 #PBS -l walltime=00:58:00
 #PBS -l filesystems=flare
 #PBS -N tables-a
 #PBS -j oe
-#PBS -o /lus/flare/projects/neutrinoGPU/xning/jobs/step4_tables/tables-a.out
-source /lus/flare/projects/neutrinoGPU/xning/env.sh
-B=/lus/flare/projects/neutrinoGPU/xning/bdt-comm/steps/step4_tables/build_tables.py
-L=/lus/flare/projects/neutrinoGPU/yuhw/production-prep/dlspace/lists
-O=/lus/flare/projects/neutrinoGPU/xning/BDT/working/step4_tables/output/full
+#PBS -o $OUT/tables-a.out
+source $HOME/env.sh   # module load frameworks; pip --user uproot xgboost
+B=$REPO/tables/build_tables.py
+L=$LISTS
+O=$OUT
 python $B aurora-r2-bnb $O --list $L/bnb-merged-cafs.txt --nproc 100 --tag all
 python $B aurora-r2-ncdr $O --list $L/ncdr-merged-cafs.txt --nproc 100 --tag all
-ls /lus/flare/projects/neutrinoGPU/xning/data/fg1-beam-off-train/*/*.root > $O/beamoff-train-files.txt
+ls $DATA/fg1-beam-off-train/*/*.root > $O/beamoff-train-files.txt
 python $B fg1-beam-off-train $O --list $O/beamoff-train-files.txt --nproc 100 --tag all
 echo DONE

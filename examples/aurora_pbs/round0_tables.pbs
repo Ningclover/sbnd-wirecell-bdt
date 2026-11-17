@@ -1,16 +1,17 @@
 #!/bin/bash -l
-#PBS -A neutrinoGPU::WireCell_aurora
+# Set before use: REPO (this repository), LISTS (folder of <sample>-merged-cafs.txt), DATA, OUT; and -A to your allocation.
+#PBS -A <project>::<suballocation>
 #PBS -q debug
 #PBS -l select=1
 #PBS -l walltime=00:40:00
 #PBS -l filesystems=flare
 #PBS -N round0-tables
 #PBS -j oe
-#PBS -o /lus/flare/projects/neutrinoGPU/xning/BDT/working/step6_round0/output/round0-tables.out
-source /lus/flare/projects/neutrinoGPU/xning/env.sh
-cd /lus/flare/projects/neutrinoGPU/xning/BDT/working/step6_round0/scripts
-L=/lus/flare/projects/neutrinoGPU/yuhw/production-prep/dlspace/lists
-O=/lus/flare/projects/neutrinoGPU/xning/BDT/working/step6_round0/output/tables
+#PBS -o $OUT/round0_tables.out
+source $HOME/env.sh   # module load frameworks; pip --user uproot xgboost
+cd $REPO/training/round0
+L=$LISTS
+O=$OUT
 python build_round0_tables.py nuecc $L/nuecc-merged-cafs.txt 2020 100 $O
 python build_round0_tables.py bnb   $L/bnb-merged-cafs.txt   250  100 $O
 echo DONE
