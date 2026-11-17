@@ -1,0 +1,80 @@
+{
+ "seed": 5,
+ "fit_seconds": 8.5,
+ "pool_rows": {
+  "train": 2656,
+  "test": 2537
+ },
+ "signal": {
+  "train": 1986,
+  "test": 1882
+ },
+ "background": {
+  "train": 670,
+  "test": 655
+ },
+ "true_signal": {
+  "train": 3221,
+  "test": 3147
+ },
+ "shipped": {
+  "auc": 0.920662605154497,
+  "purity_at_50": 0.9476219145093318,
+  "cut_at_50": 4.353507995605469,
+  "selected_at_50": 1661,
+  "purity_at_40": 0.9805295950155763,
+  "cut_at_40": 7.885468482971191,
+  "selected_at_40": 1284,
+  "ceiling": 0.598029869717191
+ },
+ "model_A": {
+  "auc": 0.9557114000859894,
+  "purity_at_50": 0.971604938271605,
+  "cut_at_50": 3.273594617843628,
+  "selected_at_50": 1620,
+  "purity_at_40": 0.9866771159874608,
+  "cut_at_40": 5.196599960327148,
+  "selected_at_40": 1276,
+  "ceiling": 0.598029869717191
+ },
+ "wcgpu_reference": {
+  "shipped": {
+   "auc": 0.916,
+   "purity_at_50": 0.9538,
+   "purity_at_40": 0.984
+  },
+  "model_A": {
+   "auc": 0.9479,
+   "purity_at_50": 0.9691,
+   "purity_at_40": 0.9833
+  },
+  "ceiling": 0.605,
+  "pool": {
+   "train": 2662,
+   "test": 2722
+  },
+  "signal": {
+   "train": 1958,
+   "test": 2047
+  },
+  "background": {
+   "train": 704,
+   "test": 675
+  }
+ },
+ "acceptance": {
+  "auc_gain": 0.035,
+  "auc_gain_ref": 0.0319,
+  "auc_gain_window": [
+   0.018000000000000002,
+   0.046
+  ],
+  "ceiling": 0.598,
+  "ceiling_window": [
+   0.581,
+   0.629
+  ],
+  "purity_gain_pts": 2.4,
+  "pass": true
+ }
+}

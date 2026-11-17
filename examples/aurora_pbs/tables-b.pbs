@@ -1,0 +1,15 @@
+#!/bin/bash -l
+#PBS -A neutrinoGPU::WireCell_aurora
+#PBS -q debug
+#PBS -l select=1
+#PBS -l walltime=00:58:00
+#PBS -l filesystems=flare
+#PBS -N tables-b
+#PBS -j oe
+#PBS -o /lus/flare/projects/neutrinoGPU/xning/jobs/step4_tables/tables-b.out
+source /lus/flare/projects/neutrinoGPU/xning/env.sh
+B=/lus/flare/projects/neutrinoGPU/xning/bdt-comm/steps/step4_tables/build_tables.py
+L=/lus/flare/projects/neutrinoGPU/yuhw/production-prep/dlspace/lists
+O=/lus/flare/projects/neutrinoGPU/xning/BDT/working/step4_tables/output/full
+for s in 0 1 2; do python $B aurora-r2-nuecc $O --list $L/nuecc-merged-cafs.txt --slice $((s*10000)):$(((s+1)*10000)) --nproc 100 --tag s$s; done
+echo DONE

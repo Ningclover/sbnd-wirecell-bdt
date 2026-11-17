@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#PBS -A neutrinoGPU::WireCell_aurora
+#PBS -q debug
+#PBS -l select=1
+#PBS -l walltime=00:58:00
+#PBS -l filesystems=flare
+#PBS -N round1
+#PBS -j oe
+#PBS -o /lus/flare/projects/neutrinoGPU/xning/jobs/round1/round1.out
+source /lus/flare/projects/neutrinoGPU/xning/env.sh
+cd /lus/flare/projects/neutrinoGPU/xning
+python BDT/working/step6_round1/scripts/train_round1.py BDT/working/step4_tables/output/merged BDT/working/step6_round1/output
+echo DONE
