@@ -5,8 +5,8 @@ efficiency and purity at the cut of 7 for the shipped score, ceiling. Usage: pyt
 import sys, os, json, time
 import numpy as np, pandas as pd, xgboost as xgb
 from sklearn.metrics import roc_auc_score
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, '/lus/flare/projects/neutrinoGPU/xning/bdt-comm/steps/step3_spec'); import spec_v1 as S
-NAMES = [l.strip() for l in open(os.path.join(HERE, 'nue_l2_inputs_258.txt')) if l.strip()]
+HERE = os.path.dirname(os.path.abspath(__file__)); SPEC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'spec'); sys.path.insert(0, SPEC); import spec_v1 as S
+NAMES = [l.strip() for l in open(os.path.join(SPEC, 'nue_l2_inputs_258.txt')) if l.strip()]
 tdir, outd = sys.argv[1], sys.argv[2]; os.makedirs(outd, exist_ok=True)
 SAMPLES = ['aurora-r2-nuecc', 'aurora-r2-bnb', 'aurora-r2-ncdr', 'fg1-beam-off-train']
 COLS = ['sample', 'file_id', 'run', 'subrun', 'event', 'cand', 'br_filled', 'nue_score', 'reco_x', 'reco_y', 'reco_z', 'partner_kind', 'dist_sce_cm',

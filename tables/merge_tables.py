@@ -3,7 +3,7 @@ current builder: integer key columns, is_placeholder, truth_pf_unreadable. Files
 replace the failed rows of the same file_id. Usage: python merge_tables.py <in_dir> <sample> <out_dir>"""
 import sys, os, glob, json
 import numpy as np, pandas as pd
-sys.path.insert(0, '/lus/flare/projects/neutrinoGPU/xning/bdt-comm/steps/step3_spec'); import spec_v1 as S
+SPEC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'spec'); sys.path.insert(0, SPEC); import spec_v1 as S
 ind, sample, outd = sys.argv[1], sys.argv[2], sys.argv[3]; os.makedirs(outd, exist_ok=True)
 KEYS = ['run', 'subrun', 'event', 'cand', 'nu_idx']
 summary = {}

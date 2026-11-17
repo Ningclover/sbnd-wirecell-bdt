@@ -5,8 +5,8 @@ true signal neutrinos selected by one model and not the other. Per reco-E bin: p
 Usage: python energy_bins.py <tables_dir> <model.json> <out.json>"""
 import sys, os, json
 import numpy as np, pandas as pd, xgboost as xgb
-sys.path.insert(0, '/lus/flare/projects/neutrinoGPU/xning/bdt-comm/steps/step3_spec'); import spec_v1 as S
-HERE = os.path.dirname(os.path.abspath(__file__)); NAMES = [l.strip() for l in open(os.path.join(HERE, 'nue_l2_inputs_258.txt')) if l.strip()]
+SPEC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'spec'); sys.path.insert(0, SPEC); import spec_v1 as S
+HERE = os.path.dirname(os.path.abspath(__file__)); NAMES = [l.strip() for l in open(os.path.join(SPEC, 'nue_l2_inputs_258.txt')) if l.strip()]
 tdir, model_path, outp = sys.argv[1:4]; EDGES = np.array([0, 250, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000, 6000.0])
 COLS = list(dict.fromkeys(['sample', 'file_id', 'run', 'subrun', 'event', 'cand', 'br_filled', 'nue_score', 'reco_x', 'reco_y', 'reco_z', 'partner_kind', 'dist_sce_cm', 'm_pdg', 'm_ccnc', 'm_vx', 'm_vy', 'm_vz', 'm_edep_mev', 'm_E', 'm_nu_idx', 'kine_reco_Enu', 'label_unreadable', 'is_placeholder'] + NAMES))
 C, T = [], []

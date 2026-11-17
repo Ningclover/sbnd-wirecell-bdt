@@ -4,7 +4,7 @@ classes, AUC of nue_score on the pool, efficiency against the true-signal denomi
 at matched efficiency 50 % / 40 %, ceiling; all on the test half and on the whole. Usage: python baseline_full.py <tables_dir> <out.json>"""
 import sys, os, json
 import numpy as np, pandas as pd
-sys.path.insert(0, '/lus/flare/projects/neutrinoGPU/xning/bdt-comm/steps/step3_spec'); import spec_v1 as S
+SPEC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'spec'); sys.path.insert(0, SPEC); import spec_v1 as S
 from sklearn.metrics import roc_auc_score
 tdir, outp = sys.argv[1], sys.argv[2]
 COLS = ['sample', 'file_id', 'run', 'subrun', 'event', 'cand', 'br_filled', 'nue_score', 'reco_x', 'reco_y', 'reco_z', 'partner_kind', 'dist_sce_cm',
