@@ -1,11 +1,10 @@
-# Workflow: how to run it, and how to adapt it to another BDT
+# Workflow: how to run it
 
 ## 0. What a BDT needs here
 
 One row per neutrino candidate with (a) the model inputs, (b) a label, (c) a train/test split, plus one row per true
 interaction for the efficiency denominator and one row per file for the exposure. `spec/spec_v1.md` fixes all of this
-for the ν<sub>e</sub> CC tagger; `spec/spec_v1.py` is the same in code and every script imports it. A different BDT changes
-the label, the signal definition and the input list, and keeps everything else.
+for the ν<sub>e</sub> CC tagger; `spec/spec_v1.py` is the same in code and every script imports it.
 
 ## 1. Environment
 
@@ -43,16 +42,11 @@ Cost on Aurora: about 5 s per file per process; 100 processes per node; 90,000 f
   for truth, reco and evaluation, computed when a table is read.
 - Split: even subrun = train, odd = test (beam-off data: by run).
 
-**For another BDT** write a `signal_mask` for its signal (for NC π⁰: a neutrino partner, NC, a true π⁰, vertex rule as
-wanted) and keep `pool_mask`, `in_fv`, `background_class` (extend its classes), `true_signal_mask` (the denominator)
-and `split`. Put the new function next to the old one with a version note; do not change the ν<sub>e</sub> ones.
-
 ## 4. Inputs
 
 `spec/nue_l2_inputs_258.txt` lists the 258 inputs of the shipped ν<sub>e</sub> final model in the order the toolkit's
-TMVA reader expects (257 `T_tagger` scalars plus `kine_reco_Enu`). For another BDT list its inputs the same way (the
-toolkit's `UbooneNueBDTScorer` / the π⁰ and "other" scorers name them in their `AddVariable` calls); every one is a
-`T_tagger` scalar and is already in the candidates table.
+TMVA reader expects (257 `T_tagger` scalars plus `kine_reco_Enu`), as the toolkit's `UbooneNueBDTScorer` names them
+in its `AddVariable` calls; every one is a `T_tagger` scalar and is already in the candidates table.
 
 ## 5. Training (`training/`)
 
@@ -86,14 +80,3 @@ from the CAF header, the ν<sub>e</sub>CC-filtered MC mixed by spill, beam-off b
 efficiency and purity with the SPINE match and no vertex rule, progressive cuts, per-energy-bin curves). It takes a
 `--score` column, so a retrained model is evaluated exactly like the shipped one. `docs/evaluation_standard.md`
 explains every weight.
-
-## 7. Adapting to the NC π⁰ or the "other" single-photon BDT: the short list
-
-1. Input list: the scorer's variable names, in order, into `spec/<model>_inputs.txt`.
-2. Signal and background: a new mask pair in `spec_v1.py`; the denominator for the efficiency.
-3. Samples: which campaigns carry the signal (the Aurora NC Δ-radiative campaign and BNB CV for π⁰ / single photon);
-   beam-off as the pure-cosmic background.
-4. Build the tables once with `build_tables.py` (they already hold every tagger scalar, so no rebuild for a new input
-   list), run the baseline with the stored shipped score of that model, then `train_round1.py` with the new names.
-5. Evaluate per energy bin at matched efficiency, and through `eval_standard.py` with the signal definition of the
-   selection you compare against.

@@ -19,8 +19,7 @@ folders are arguments.
 | 5 | **Evaluation standard**: the collaboration's efficiency / purity table with absolute normalization. | `evaluation/eval_standard.py`, `docs/evaluation_standard.md` |
 | 6 | **Re-score the shipped TMVA model** without ROOT (used to prove the merged CAFs carry the complete model inputs). | `tools/tmva_grad_forest.py` |
 
-`WORKFLOW.md` explains how to run it end to end and how to adapt it to another BDT (NC π⁰, the "other" BDT of the
-single-photon selection, the ν<sub>μ</sub> CC tagger). Results of the ν<sub>e</sub> retraining are kept in the project's
+`WORKFLOW.md` explains how to run it end to end. Results of the ν<sub>e</sub> retraining are kept in the project's
 internal record, not in this repository.
 
 ## Inputs
