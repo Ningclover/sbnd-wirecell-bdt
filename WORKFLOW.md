@@ -66,6 +66,18 @@ paired per true neutrino: judge models there, not on AUC alone.
 Lessons from the small-sample study that still hold: the label matters more than the model; keep the shipped
 small-model scores as inputs (retraining them leaks); never quote the train half; compare at matched efficiency.
 
+### Where the small-sample study differs from this workflow
+
+The recipe here started from a small-sample study, and its numbers are the round-0 reference (`training/round0/`). Compare against it with these differences in mind:
+- **Sample:** 21,976 MC events from an older reconstruction (an earlier version of the same Wire-Cell chain): 13,099 BNB CV + 8,877 ν<sub>e</sub> CC. That is 5,384 pool rows, half for training (2,662 rows, 704 background), against about 84,000 training rows here. No beam-off data and no NC Δ-radiative sample.
+- **Input format:** per-event `tracking-pr.root` files, not merged CAFs.
+- **Label:** a truth match built from true energy deposits. It used the IoU (overlap divided by union) of occupied 1 cm voxels, all cosmic deposits pooled as one truth object, and the candidate's energy segments. This workflow uses `T_match` level 2 instead (point IoU on reconstructed points, one truth object per cosmic particle). The vertex rule, signal definition, pool and background classes are the same. At the same sample size the two labels give the same retraining gain (the round-0 acceptance test).
+- **FV:** the box x ±191.05, y ±189.31, z 10.85–450.15 cm with a 5 cm cathode band, and no East-TPC cut-out. It is kept as the `in_wcgpu1_box` column.
+- **Split:** the same even/odd subrun rule.
+- **Inputs:** the same 258 shipped inputs with the stored small-model scores. Model B added 288 summary statistics of the per-object lists and tied with model A.
+- **Training:** the same XGBoost settings, except `base_score`, which xgboost chose there (0.7355) and which is fixed at 0.5 here.
+- **Evaluation:** AUC and purity at matched efficiency on the unweighted training mix. There were no POT weights and no beam-off, so its purities are not beam purities.
+
 ## 6. Baseline and evaluation (`baseline/`, `evaluation/`)
 
 `baseline_full.py MERGED OUT.json`: the shipped score on the tables, per sample and for the mix, test half and all.
