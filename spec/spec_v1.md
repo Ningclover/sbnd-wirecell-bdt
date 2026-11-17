@@ -1,6 +1,6 @@
 # spec_v1: the shared specification for tables, label, FV, split and scoring
 
-Status: draft by Aurora, 2026-11-10; FV changed to the collaboration nu_e FV on 2026-11-11; review changes of wcgpu and gpvm folded in on 2026-11-11 (sections 1, 3.1, 3.4, 3.8, 5, 6, 7). Frozen when both say so. Becomes the plan of record when both say "no objection"; changes after that get a new version number.
+Status: draft by Aurora, 2026-11-10; FV changed to the collaboration nu_e FV on 2026-11-11; review changes of wcgpu and gpvm folded in on 2026-11-11 (sections 1, 3.1, 3.4, 3.8, 5, 6, 7). FROZEN 2026-11-17: "no objection" from wcgpu1 and gpvm on the version on main at 75ce1ad; the two edits of 2026-11-17 are a wording fix in section 7 and the Fermilab file-id rule in section 2. Changes from here get a new version number.
 
 Code: `spec_v1.py` next to this file. Both servers import it; nobody re-implements the rules.
 
@@ -16,7 +16,7 @@ Rules: hold-out files (Xin's list, by file id for MC, by event for data) are nev
 
 ## 2. Key
 
-Every row of every table carries `sample`, `file_id` (the merged-CAF file name; the aurora-r2 unit id is its `reco2-...` stem), `run`, `subrun`, `event`, `cand` (= `wc.T_tagger.nu_index`). (run, subrun, event) alone is not unique in fg1 nu_e CC (19 collisions), so `file_id` is always part of the key. Per file, `wct_version` (`wc.Trun.wct_version`) is stored.
+Every row of every table carries `sample`, `file_id` (the merged-CAF file name, the builder's default; on the Fermilab productions, where every external list is keyed by the unit folder name, the build passes `--file-id-from dirname` and `file_id` is that folder name), `run`, `subrun`, `event`, `cand` (= `wc.T_tagger.nu_index`). (run, subrun, event) alone is not unique in fg1 nu_e CC (19 collisions), so `file_id` is always part of the key. Per file, `wct_version` (`wc.Trun.wct_version`) is stored.
 
 ## 3. Label (per candidate), from `wc.T_match` level 2
 
@@ -63,7 +63,7 @@ MC, per sample: even `subrun` = train, odd = test; every candidate of an event s
 
 - Inference is post-processing of the merged CAF. Model: xgboost, trained with `base_score=0.5` fixed, exported as JSON; readers also patch `base_score` from the JSON. Score written as the raw margin (`output_margin=True`); the shipped `nue_score` is kept next to it in every score table.
 - Sentinel: `nue_score = -15` when `br_filled == 0`; the model is not evaluated and the new score is also -15. Ties at -15 collapse into one point on every curve.
-- Operating point: matched efficiency (50 % of the true signal, section 3.7), never a fixed cut carried between models. Every comparison is per true-energy bin at matched purity, paired per true neutrino against the baseline.
+- Operating point: matched efficiency (50 % of the true signal, section 3.7), never a fixed cut carried between models. Every comparison is per true-energy bin at matched overall efficiency, paired per true neutrino against the baseline.
 - Round-0 training recipe (wcgpu small-sample study), used exactly: inputs = the 258 names in the shipped order as float32, the 15 small-model scores as STORED in the file; no input protections, NaN left as xgboost missing; `XGBClassifier(max_depth=30, n_estimators=600, learning_rate=0.1, objective='binary:logitraw', subsample=0.8, colsample_bytree=1, colsample_bylevel=0.3, colsample_bynode=0.3, gamma=0.1, random_state=5)` plus `base_score=0.5` (the one intended difference: wcgpu let xgboost fit it, 0.7355; a constant margin offset); no class or event weights; fit on the train-half pool rows with `label_unreadable == 0`, label `is_signal`.
 - Acceptance test for round 0 (wcgpu small-sample study), gated on the gains, not on absolute values, since r7 and aurora-r2 are different reconstructions. Definitions as in wcgpu's `stage2/evalnue.py`: AUC over the test-half pool rows of both samples together; efficiency = selected signal over the section-3.7 denominator; purity = selected `is_signal` over selected pool rows at the tightest cut reaching 50 % efficiency. wcgpu's reference with its bootstrap errors (500 resamples by event): AUC 0.9160 +- 0.0055 shipped, 0.9479 +- 0.0046 retrained, gain +0.0319 +- 0.0048; purity at 50 % 95.38 +- 0.83 shipped, 96.91 +- 0.49 retrained, gain +1.53 +- 0.69 points; ceiling 60.5 +- 0.8 %. Pass rule: AUC gain within 0.032 +- 0.014 (2 sigma combined), ceiling within 60.5 +- 2.4 %, purity gain positive (a sign check only). If the AUC gain or the ceiling fails, the label is the first suspect: rebuild the pooled-cosmic rule from `T_overlap` before changing anything else.
 
