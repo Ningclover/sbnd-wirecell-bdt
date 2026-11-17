@@ -10,7 +10,7 @@ EDEP_MIN_MEV = 75.0       # deposited energy of the true neutrino, in MeV (CAF s
 SENTINEL = -15.0          # nue_score when br_filled == 0 (the model never ran)
 
 # Fiducial volume: the collaboration's nu_e FV (Pandora/SPINE nueCC FV, SBND technote eq. 6; Matteo's cuts.FV),
-# user decision 2026-11-11, issue #4: the box below minus the cathode band, minus the cut-out of the top downstream
+# decided 2026-11-11: the box below minus the cathode band, minus the cut-out of the top downstream
 # corner of the East TPC. Used unchanged for the training label, the pre-cut and the evaluation.
 FV = dict(x=(-190.0, 190.0), y=(-190.0, 190.0), z=(10.0, 450.0), cathode_gap=5.0)
 FV_CUTOUT = dict(x_max=0.0, y_min=100.0, z_min=250.0)   # a vertex is in the cut-out when x < 0 and y > 100 and z > 250
@@ -66,7 +66,7 @@ def signal_mask(partner_kind, label_unreadable, dist_sce_cm, m_pdg, m_ccnc, m_vx
     return (cls == 'neutrino') & vtx_ok & nue_cc & in_fv(m_vx, m_vy, m_vz) & (np.asarray(m_edep_mev, float) > EDEP_MIN_MEV)
 
 def background_class(partner_kind, label_unreadable, dist_sce_cm, m_pdg, m_ccnc):
-    """For pool rows that are not signal. Same classes as the wcgpu study (issue #1 item 2)."""
+    """For pool rows that are not signal. Same classes as the wcgpu study."""
     cls = partner_class(partner_kind, label_unreadable)
     d = np.asarray(dist_sce_cm, float); vtx_ok = np.isfinite(d) & (d < VTX_CUT_CM)
     pdg = np.abs(np.asarray(m_pdg)); ccnc = np.asarray(m_ccnc)

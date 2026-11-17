@@ -11,7 +11,7 @@ the label, the signal definition and the input list, and keeps everything else.
 
 Python 3.9+ with numpy, pandas, pyarrow, uproot (5.6+), xgboost (2.1+), scikit-learn. On Aurora:
 `module load frameworks` plus pip --user installs of uproot and xgboost. On the gpvm the grid bundle
-(Python 3.9.25, uproot 5.6.9, xgboost 2.1.4) runs every script here. Train with `base_score=0.5` and export JSON: a model
+(Python 3.9.25, uproot 5.6.9, xgboost 2.1.4) has run the table builder, the merge and compare tools and the evaluation script; every other script parses as Python 3.9 but has only run on Aurora. Train with `base_score=0.5` and export JSON: a model
 written by xgboost 3.x with a fitted base_score loads in 2.1 with a silent constant shift of the margin.
 
 ## 2. Tables (`tables/`)

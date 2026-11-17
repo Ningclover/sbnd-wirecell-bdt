@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The evaluation standard (issue #9): Matteo Vicenzi's nueCC efficiency / purity table, computed from spec_v1 tables.
+"""The evaluation standard: Matteo Vicenzi's nueCC efficiency / purity table, computed from spec_v1 tables.
 
 Method (docs/normalization_and_evaluation_standard.md; his work/plots.py, effpur.py, cuts.py at commit 9f2803b):
   mixed MC   BNB MC without the spills that hold a nu_e/anti-nu_e CC vertex inside the filter volume, weight 1, plus the
@@ -21,7 +21,7 @@ otherwise). --drop-repeated-keys drops events whose (run, subrun, event) is held
 """
 import argparse, json, os, sys
 import numpy as np, pandas as pd
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'step3_spec'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'spec'))
 import spec_v1
 
 EV = ['file_id', 'run', 'subrun', 'event']

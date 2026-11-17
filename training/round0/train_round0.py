@@ -1,4 +1,4 @@
-"""Round 0: reproduce the wcgpu small-sample study on aurora-r2 with its own recipe (issue #1 items 1-3, #6 conditions).
+"""Round 0: reproduce the wcgpu small-sample study on aurora-r2 with its own recipe.
 Label and pool as spec_v1 but with the wcgpu1 box (what wcgpu used); split even subrun = train, odd = test;
 model A = XGBoost on the 258 shipped inputs with MicroBooNE's settings; metrics on the test half:
 AUC on the pool, purity at 50 % and 40 % efficiency (efficiency against the true signal count), ceiling.
@@ -26,7 +26,7 @@ X = {h: P[P.split == h][NAMES].to_numpy(np.float32) for h in ('train', 'test')}
 y = {h: P[P.split == h].is_signal.to_numpy(int) for h in ('train', 'test')}
 n_true = {h: int(T[(T.split == h) & T.is_true_signal].shape[0]) for h in ('train', 'test')}
 print('pool rows train/test', len(y['train']), len(y['test']), 'signal', int(y['train'].sum()), int(y['test'].sum()), 'true signal', n_true)
-# MicroBooNE / wcgpu settings (issue #1 item 1), base_score fixed per spec_v1
+# MicroBooNE / wcgpu settings, base_score fixed per spec_v1
 params = dict(max_depth=30, n_estimators=600, learning_rate=0.1, objective='binary:logitraw', subsample=0.8, colsample_bytree=1,
               colsample_bylevel=0.3, colsample_bynode=0.3, gamma=0.1, random_state=seed, base_score=0.5, n_jobs=32, tree_method='hist')
 t0 = time.time(); model = xgb.XGBClassifier(**params); model.fit(X['train'], y['train']); fit_s = time.time() - t0
@@ -48,7 +48,7 @@ res = dict(seed=seed, fit_seconds=round(fit_s, 1), pool_rows=dict(train=len(y['t
            shipped=metrics(te, 'nue_score', n_true['test']), model_A=metrics(te, 'score_A', n_true['test']),
            wcgpu_reference=dict(shipped=dict(auc=0.9160, purity_at_50=0.9538, purity_at_40=0.9840), model_A=dict(auc=0.9479, purity_at_50=0.9691, purity_at_40=0.9833), ceiling=0.605,
                                 pool=dict(train=2662, test=2722), signal=dict(train=1958, test=2047), background=dict(train=704, test=675)))
-# acceptance test as wcgpu defined it (issue #6 review): gate on the gains, not on absolute values
+# acceptance test as wcgpu defined it: gate on the gains, not on absolute values
 ref = res['wcgpu_reference']; gA, gS = res['model_A'], res['shipped']
 res['acceptance'] = dict(auc_gain=round(gA['auc'] - gS['auc'], 4), auc_gain_ref=round(ref['model_A']['auc'] - ref['shipped']['auc'], 4), auc_gain_window=[0.032 - 0.014, 0.032 + 0.014],
                          ceiling=round(gA['ceiling'], 4), ceiling_window=[0.605 - 0.024, 0.605 + 0.024], purity_gain_pts=round(100 * (gA['purity_at_50'] - gS['purity_at_50']), 2))
