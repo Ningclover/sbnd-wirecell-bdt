@@ -16,16 +16,16 @@ folders are arguments.
 | 2 | **Tables**: one parquet per sample and table (candidates with all tagger scalars and the 258 model inputs, truth, files with exposure, objects). | `tables/build_tables.py`, `merge_tables.py`, `compare_tables.py` |
 | 3 | **Baseline**: the shipped weights on the tables. | `baseline/baseline_full.py` |
 | 4 | **Training**: round 0 reproduces the small-sample study (acceptance test); round 1 is the shipped structure at full statistics with a learning curve and a per-energy-bin comparison. | `training/round0/`, `training/round1/` |
-| 5 | **Evaluation standard**: Matteo Vicenzi's efficiency / purity table with the collaboration normalization. | `evaluation/eval_standard.py`, `docs/normalization_and_evaluation_standard.md` |
+| 5 | **Evaluation standard**: the collaboration's efficiency / purity table with absolute normalization. | `evaluation/eval_standard.py`, `docs/evaluation_standard.md` |
 | 6 | **Re-score the shipped TMVA model** without ROOT (used to prove the merged CAFs carry the complete model inputs). | `tools/tmva_grad_forest.py` |
 
 `WORKFLOW.md` explains how to run it end to end and how to adapt it to another BDT (NC π⁰, the "other" BDT of the
-single-photon selection, the ν<sub>μ</sub> CC tagger). `RESULTS.md` holds the numbers so far.
+single-photon selection, the ν<sub>μ</sub> CC tagger). Results of the ν<sub>e</sub> retraining are kept in the project's
+internal record, not in this repository.
 
 ## Inputs
 
-Merged flat CAFs with the Wire-Cell tree `recTreeWireCell` beside `recTree` (Haiwang's productions, see
-`docs/wirecell_catalog_digest.md`). The label comes from `T_match` (SPINE-style truth match written by the toolkit), the
+Merged flat CAFs with the Wire-Cell tree `recTreeWireCell` beside `recTree` (the SBND Wire-Cell productions). The label comes from `T_match` (SPINE-style truth match written by the toolkit), the
 SCE-shifted true vertex from `T_dlvtx_call`, the exposure from the CAF header. No Bee files are needed.
 
 ## Quick start
@@ -45,9 +45,8 @@ python evaluation/eval_standard.py --help
 
 ## Status (2026-11-17)
 
-Round 1 on the full aurora-r2 campaigns: AUC 0.915 (shipped) → 0.969, purity at 50 % efficiency 93.4 → 97.8 % on the
-ν<sub>e</sub> CC + BNB test half; the learning curve is still rising. Round 2 (sample weighting, early stopping, depth scan,
-new input families) is next. Details in `RESULTS.md`.
+The ν<sub>e</sub> CC tagger has been retrained at full statistics on the Aurora campaigns (round 1); round 2 (sample
+weighting, early stopping, depth scan, new input families) is next. Numbers are reported inside the collaboration.
 
 ## Contributing
 

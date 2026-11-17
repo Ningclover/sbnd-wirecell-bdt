@@ -72,7 +72,7 @@ small-model scores as inputs (retraining them leaks); never quote the train half
 `evaluation/eval_standard.py`: Matteo's efficiency / purity table with the collaboration normalization (POT weights
 from the CAF header, the ν<sub>e</sub>CC-filtered MC mixed by spill, beam-off by gates with f = 0.0725, two-loop
 efficiency and purity with the SPINE match and no vertex rule, progressive cuts, per-energy-bin curves). It takes a
-`--score` column, so a retrained model is evaluated exactly like the shipped one. `docs/normalization_and_evaluation_standard.md`
+`--score` column, so a retrained model is evaluated exactly like the shipped one. `docs/evaluation_standard.md`
 explains every weight.
 
 ## 7. Adapting to the NC π⁰ or the "other" single-photon BDT: the short list
