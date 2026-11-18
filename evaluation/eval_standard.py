@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The evaluation standard: Matteo Vicenzi's nueCC efficiency / purity table, computed from spec_v1 tables.
 
-Method (docs/normalization_and_evaluation_standard.md; his work/plots.py, effpur.py, cuts.py at commit 9f2803b):
+Method (docs/evaluation_standard.md; his work/plots.py, effpur.py, cuts.py at commit 9f2803b):
   mixed MC   BNB MC without the spills that hold a nu_e/anti-nu_e CC vertex inside the filter volume, weight 1, plus the
              nueCC-filtered MC whole, weight POT_bnb / POT_nuecc. POT = sum of pot_hdr over the files read without error.
   candidates T_tagger rows that are not placeholders (kine_reco_Enu == 0, neutrino_type == 0, vertex at the origin).
