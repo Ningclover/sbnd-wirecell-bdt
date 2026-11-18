@@ -32,6 +32,15 @@ shared-file check: run the builder on the same file on two machines and compare 
 
 Cost on Aurora: about 5 s per file per process; 100 processes per node; 90,000 files in three one-hour debug jobs.
 
+
+Since spec v1.2 (2026-11-18) the build is a store for every training task, not an input list: the candidates table also
+holds every per-candidate `T_kine` scalar (`kine_*`), the vertex-finder outputs of the first two calls (`dlv0_*`,
+`dlv1_*`) and the object count per level-1 model (`n_obj_<model>`); with `--objs` the builder writes one
+`objs_<model>_<sample>.parquet` per level-1 small model (`spec/l1_models.py`), one row per object with the model's
+inputs and its rule flag, for the level-1 retraining. `--timeout` (default 900 s) records a file that hangs as
+`TIMEOUT` and goes on. `merge_tables.py` merges the object tables too. Checked on 60 aurora-r2 files: the 1,280 v1
+columns are unchanged.
+
 ## 3. Label and FV (`spec/spec_v1.py`)
 
 - Pool: `br_filled == 1` and reco vertex in the FV (the tagger ran; the pre-cut of the selection).

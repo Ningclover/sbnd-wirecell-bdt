@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""spec_v1 table builder: merged CAF(s) -> cands_<sample>.parquet, truth_<sample>.parquet, files_<sample>.parquet
-(and objs_<sample>.parquet with --objs). The same code runs on Aurora (training samples) and on gpvm / FermiGrid
-(inference samples). Python 3.9 syntax; needs numpy, pandas, pyarrow, uproot (5.6 or newer).
+"""spec_v1 table builder: merged CAF(s) -> cands_<sample>.parquet, truth_<sample>.parquet, files_<sample>.parquet,
+and with --objs one objs_<model>_<sample>.parquet per level-1 small model (one row per object: key, cand, index, the
+model's inputs, its rule flag). The same code runs on Aurora (training samples) and on gpvm / FermiGrid (inference
+samples). Python 3.9 syntax; needs numpy, pandas, pyarrow, uproot (5.6 or newer).
+
+Since spec v1.2 (2026-11-18) the candidates table also carries every per-candidate T_kine scalar (kine_*), the
+vertex-finder outputs of the first two T_dlvtx_call calls per candidate (dlv0_*, dlv1_*), and the object count per
+level-1 model (n_obj_<model>), so that no later input family needs another pass. --timeout gives up on one file after
+that many seconds (TIMEOUT error in the files table) instead of blocking the whole run.
 
   python build_tables.py SAMPLE OUT_DIR --files a.root b.root ...          # these files (paths or root:// URLs)
   python build_tables.py SAMPLE OUT_DIR --list list.txt --slice 0:200      # lines [0, 200) of a list, one path per line
@@ -10,12 +16,14 @@
 Columns are the ones spec_v1.md section 5 names. The label rules are applied later, when a table is read, through
 spec_v1.py; this file only extracts. file_id = the CAF file name by default (--file-id-from basename); 'unit' gives the aurora-r2 unit folder two levels up.
 """
-import argparse, json, os, sys, time
+import argparse, json, os, signal, sys, time
 import numpy as np
 import pandas as pd
 import uproot
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, '..', 'spec'))
+from l1_models import L1_MODELS
 WC = 'recTreeWireCell'
 KEY = ['sample', 'file_id', 'run', 'subrun', 'event']
 KEY_CLASH = {'wc.T_tagger.run', 'wc.T_tagger.subrun', 'wc.T_tagger.event', 'wc.T_tagger.eventNo', 'wc.T_tagger.runNo', 'wc.T_tagger.subRunNo'}   # tagger scalars that would overwrite the key
@@ -27,6 +35,15 @@ DLV = ['pass', 'nu_index', 'accepted', 'status', 'n_points', 'n_space', 'two_end
        'rerank_valid', 'rerank_x', 'rerank_y', 'rerank_z', 'trad_valid', 'trad_x', 'trad_y', 'trad_z', 'hint_valid', 'dl_x', 'dl_y', 'dl_z',
        'truth_all_nu_idx', 'truth_all_reco_x', 'truth_all_reco_y', 'truth_all_reco_z', 'truth_all_reco_x..idx', 'truth_all_reco_x..length',
        'truth_all_nu_idx..idx', 'truth_all_nu_idx..length']
+# per-candidate T_kine scalars (spec v1.2); kine_reco_Enu is stored under its own name as before
+KINE_SCALARS = ['kine_nu_x_corr', 'kine_nu_y_corr', 'kine_nu_z_corr', 'kine_reco_add_energy', 'kine_pio_mass', 'kine_pio_flag', 'kine_pio_vtx_dis',
+                'kine_pio_energy_1', 'kine_pio_theta_1', 'kine_pio_phi_1', 'kine_pio_dis_1', 'kine_pio_energy_2', 'kine_pio_theta_2', 'kine_pio_phi_2', 'kine_pio_dis_2',
+                'kine_pio_angle', 'kine_energy_excluded', 'kine_energy_excluded_main', 'kine_energy_excluded_other', 'kine_n_excluded', 'kine_energy_flagged',
+                'has_vertex', 'kine_mcs_energy', 'kine_mcs_ambiguity', 'kine_mcs_tracklen', 'kine_mcs_range_energy', 'kine_mcs_segment_id', 'kine_main_vertex_id', 'cluster_id', 'matched_flash_gid']
+# vertex-finder outputs stored per candidate for the first two calls (spec v1.2)
+DLC = ['status', 'top_k', 'rerank', 'n_points', 'n_space', 'two_end_veto', 'cloud_no_exclusion', 'dual_transferred', 'accepted',
+       'trad_valid', 'trad_x', 'trad_y', 'trad_z', 'rerank_valid', 'rerank_x', 'rerank_y', 'rerank_z', 'hint_valid', 'hint_x', 'hint_y', 'hint_z',
+       'dl_x', 'dl_y', 'dl_z', 'final_valid', 'final_x', 'final_y', 'final_z']
 HDR = ['rec.hdr.run', 'rec.hdr.subrun', 'rec.hdr.evt', 'rec.hdr.first_in_subrun', 'rec.hdr.pot', 'rec.hdr.nbnbinfo', 'rec.hdr.noffbeambnb', 'rec.hdr.ngenevt', 'rec.hdr.ismc']
 
 
@@ -45,11 +62,11 @@ def extract(path, sample, file_id, want_objs=False, root=None):
     rel = os.path.relpath(path, root) if root and not path.startswith('root://') else path
     out = dict(file_id=file_id, path=rel, events=0, wc_events=0, candidates=0, label_unreadable=0, partner_missing=0,
                wct_version='', pot_hdr=0.0, pot_total_hist=np.nan, n_bnb_spills=0.0, n_offbeam_gates=0.0, ngenevt=0.0, ismc=-1, truth_pf_unreadable=0, error='')
-    cands, truth, objs = [], [], []
+    cands, truth, objs = [], [], {}
     try:
         f = uproot.open(path)
     except Exception as e:
-        out['error'] = 'OPEN_FAIL ' + str(e).splitlines()[0][:120]; return out, cands, truth, objs
+        out['error'] = 'OPEN_FAIL ' + (str(e).splitlines() or [''])[0][:120]; return out, cands, truth, objs
     # ---- header exposure (recTree) ----
     try:
         h = f['recTree'].arrays(HDR, library='np')
@@ -61,7 +78,7 @@ def extract(path, sample, file_id, want_objs=False, root=None):
             try: out['pot_total_hist'] = float(np.sum(f['TotalPOT'].values()))
             except Exception: pass
     except Exception as e:
-        out['error'] = 'HDR_FAIL ' + str(e).splitlines()[0][:120]
+        out['error'] = 'HDR_FAIL ' + (str(e).splitlines() or [''])[0][:120]
     t = f[WC]; keys = set(t.keys())
     tag_scalar = sorted(k for k in keys if k.startswith('wc.T_tagger.') and '..' not in k and k != 'wc.T_tagger.' and k not in KEY_CLASH)   # per-candidate scalars; a branch shorter than the candidate list gives NaN
     tag_list = sorted({k.split('..')[0] for k in keys if k.startswith('wc.T_tagger.') and k.endswith('..idx')})
@@ -71,15 +88,25 @@ def extract(path, sample, file_id, want_objs=False, root=None):
             'wc.T_kine.nu_index', 'wc.T_kine.kine_reco_Enu', 'wc.T_kine.kine_particle_type', 'wc.T_kine.kine_energy_particle', 'wc.T_kine.kine_particle_pool',
             'wc.T_kine.kine_particle_type..idx', 'wc.T_kine.kine_particle_type..length']
     base += tag_scalar
+    base += ['wc.T_kine.' + n for n in KINE_SCALARS if 'wc.T_kine.' + n in keys]
+    base += ['wc.T_dlvtx_call.' + n for n in ['call_index'] + DLC if 'wc.T_dlvtx_call.' + n in keys and 'wc.T_dlvtx_call.' + n not in base]
     if has_truth:
         base += ['wc.T_truth_nu.' + n for n in ['nu_idx', 'pdg', 'ccnc', 'mode', 'E', 'edep', 'vtx_x', 'vtx_y', 'vtx_z']]
     base += ['wc.T_dlvtx_call.' + n for n in DLV if 'wc.T_dlvtx_call.' + n in keys]
+    l1 = {}   # model -> (list branches present, flag branch or None)
     if want_objs:
-        base += [b for b in tag_list] + [b + '..idx' for b in tag_list] + [b + '..length' for b in tag_list]
+        for mname, md in L1_MODELS.items():
+            lb = ['wc.T_tagger.' + n for n in md['lists']]
+            if all(b + '..idx' in keys for b in lb):
+                fb = 'wc.T_tagger.' + md['flag'] if 'wc.T_tagger.' + md['flag'] + '..idx' in keys else None
+                l1[mname] = (lb, fb)
+                for b in lb + ([fb] if fb else []):
+                    base += [b, b + '..idx', b + '..length']
+    objs = {mname: [] for mname in l1}
     try:
         a = t.arrays(base, library='np')
     except Exception as e:
-        out['error'] = 'READ_FAIL ' + str(e).splitlines()[0][:120]; return out, cands, truth, objs
+        out['error'] = 'READ_FAIL ' + (str(e).splitlines() or [''])[0][:120]; return out, cands, truth, objs
     pf = None   # T_truth_pf read on its own: in some files its E/KE baskets are unreadable (same uproot limit as T_match); then only the true-lepton columns are lost
     if has_truth:
         try:
@@ -95,6 +122,8 @@ def extract(path, sample, file_id, want_objs=False, root=None):
     out['wc_events'] = int((a['wc.valid'] == 1).sum())
     wv = a['wc.Trun.wct_version']; out['wct_version'] = str(wv[0][0]) if len(wv) and len(wv[0]) else ''
     unreadable = int(out['label_unreadable'])
+    kine_sc = [n for n in KINE_SCALARS if 'wc.T_kine.' + n in a]
+    dl_cols = [n for n in DLC if 'wc.T_dlvtx_call.' + n in a]; has_dlc = 'wc.T_dlvtx_call.call_index' in a and 'wc.T_dlvtx_call.nu_index' in a
     for i in range(len(a['wc.run'])):
         if a['wc.valid'][i] != 1: continue
         key = dict(sample=sample, file_id=file_id, run=int(a['wc.run'][i]), subrun=int(a['wc.subrun'][i]), event=int(a['wc.evt'][i]))
@@ -161,8 +190,21 @@ def extract(path, sample, file_id, want_objs=False, root=None):
             for k in tag_scalar:
                 v = a[k][i]; r[k[len('wc.T_tagger.'):]] = float(v[c]) if c < len(v) else np.nan
             kc = kine_idx.get(ni)
+            for n in kine_sc: r['kine_' + n if not n.startswith('kine_') else n] = np.nan
+            for n in dl_cols: r['dlv0_' + n] = np.nan; r['dlv1_' + n] = np.nan
+            r['n_dl_calls'] = 0
             if kc is not None:
                 r['kine_reco_Enu'] = float(a['wc.T_kine.kine_reco_Enu'][i][kc])
+                for n in kine_sc:
+                    v = a['wc.T_kine.' + n][i]
+                    if kc < len(v): r['kine_' + n if not n.startswith('kine_') else n] = float(v[kc])
+            if has_dlc:
+                dni = a['wc.T_dlvtx_call.nu_index'][i]; dci = a['wc.T_dlvtx_call.call_index'][i]
+                for q in range(len(dni)):
+                    if int(dni[q]) != ni: continue
+                    r['n_dl_calls'] += 1; ci = int(dci[q])
+                    if ci in (0, 1):
+                        for n in dl_cols: r['dlv%d_%s' % (ci, n)] = float(a['wc.T_dlvtx_call.' + n][i][q])
                 i0 = int(a['wc.T_kine.kine_particle_type..idx'][i][kc]); n = int(a['wc.T_kine.kine_particle_type..length'][i][kc])
                 ty = a['wc.T_kine.kine_particle_type'][i][i0:i0 + n]; en = a['wc.T_kine.kine_energy_particle'][i][i0:i0 + n]; po_ = a['wc.T_kine.kine_particle_pool'][i][i0:i0 + n]
                 sel = [float(en[j]) for j in range(n) if abs(int(ty[j])) == 11 and int(po_[j]) == 0]
@@ -190,24 +232,47 @@ def extract(path, sample, file_id, want_objs=False, root=None):
                                 r['partner_kind'] = 'cosmic'
                         else:
                             r['partner_kind'] = 'missing'; out['partner_missing'] += 1
+            for mname, (lb, fb) in l1.items():
+                b0 = lb[0]; n = int(a[b0 + '..length'][i][c]) if c < len(a[b0 + '..idx'][i]) else 0
+                r['n_obj_' + mname] = n
+                if n == 0: continue
+                cols = lb + ([fb] if fb else [])
+                starts = {b: int(a[b + '..idx'][i][c]) for b in cols}
+                lens = {b: int(a[b + '..length'][i][c]) for b in cols}
+                sc = {sn: r.get(sn, np.nan) for sn in L1_MODELS[mname]['scalars']}
+                for j in range(n):
+                    o = dict(key, cand=ni, index=j)
+                    for b in lb: o[b[len('wc.T_tagger.'):]] = float(a[b][i][starts[b] + j]) if j < lens[b] else np.nan
+                    o.update(sc)
+                    o['flag'] = float(a[fb][i][starts[fb] + j]) if fb and j < lens[fb] else np.nan
+                    objs[mname].append(o)
             cands.append(r)
-            if want_objs:
-                for b in tag_list:
-                    name = b[len('wc.T_tagger.'):]
-                    if c < len(a[b + '..idx'][i]):
-                        i0 = int(a[b + '..idx'][i][c]); n = int(a[b + '..length'][i][c])
-                        for j in range(n): objs.append(dict(key, cand=ni, list_name=name, index=j, value=float(a[b][i][i0 + j])))
     out['candidates'] = len(cands)
     return out, cands, truth, objs
 
 
+class _Timeout(BaseException):   # not Exception: the handlers inside extract() must not swallow it
+    pass
+
+
+def _alarm(signum, frame):
+    raise _Timeout()
+
+
 def _worker(args):
-    path, sample, fid, want_objs, root = args
+    path, sample, fid, want_objs, root, timeout = args
+    if timeout and timeout > 0:
+        signal.signal(signal.SIGALRM, _alarm); signal.setitimer(signal.ITIMER_REAL, float(timeout))
     try:
         return extract(path, sample, fid, want_objs, root)
+    except _Timeout:
+        err = 'TIMEOUT after %gs' % timeout
     except Exception as e:
-        return dict(file_id=fid, path=path, error='EXC ' + str(e).splitlines()[0][:120], events=0, wc_events=0, candidates=0, label_unreadable=0, partner_missing=0, wct_version='',
-                    pot_hdr=0.0, pot_total_hist=np.nan, n_bnb_spills=0.0, n_offbeam_gates=0.0, ngenevt=0.0, ismc=-1, truth_pf_unreadable=0), [], [], []
+        err = 'EXC ' + (str(e).splitlines() or [''])[0][:120]
+    finally:
+        if timeout and timeout > 0: signal.setitimer(signal.ITIMER_REAL, 0)
+    return dict(file_id=fid, path=path, error=err, events=0, wc_events=0, candidates=0, label_unreadable=0, partner_missing=0, wct_version='',
+                pot_hdr=0.0, pot_total_hist=np.nan, n_bnb_spills=0.0, n_offbeam_gates=0.0, ngenevt=0.0, ismc=-1, truth_pf_unreadable=0), [], [], {}
 
 
 def main():
@@ -217,6 +282,7 @@ def main():
     ap.add_argument('--nproc', type=int, default=1); ap.add_argument('--objs', action='store_true'); ap.add_argument('--file-id-from', choices=['basename', 'dirname', 'unit'], default='basename', help='basename: the file name (default, unique in every sample); dirname: the parent folder; unit: the folder two levels up (the aurora-r2 unit id)')
     ap.add_argument('--tag', default='', help='suffix for the output names, e.g. a slice id')
     ap.add_argument('--root', default=None, help='sample root; the files table stores paths relative to it (spec_v1 section 5)')
+    ap.add_argument('--timeout', type=float, default=900, help='seconds allowed per file before it is recorded as TIMEOUT (0 = no limit)')
     args = ap.parse_args()
     files = list(args.files)
     if args.list:
@@ -227,7 +293,7 @@ def main():
     if not files: sys.exit('no input files')
     fid = {'basename': lambda p: os.path.basename(p), 'dirname': lambda p: os.path.basename(os.path.dirname(p.rstrip('/'))),
            'unit': lambda p: os.path.basename(os.path.dirname(os.path.dirname(p.rstrip('/'))))}[args.file_id_from]
-    jobs = [(p, args.sample, fid(p), args.objs, args.root) for p in files]
+    jobs = [(p, args.sample, fid(p), args.objs, args.root, args.timeout) for p in files]
     t0 = time.time()
     if args.nproc > 1:
         import multiprocessing as mp
@@ -239,10 +305,15 @@ def main():
     F.to_parquet(os.path.join(args.out_dir, 'files_%s%s.parquet' % (args.sample, sfx)))
     C.to_parquet(os.path.join(args.out_dir, 'cands_%s%s.parquet' % (args.sample, sfx)))
     T.to_parquet(os.path.join(args.out_dir, 'truth_%s%s.parquet' % (args.sample, sfx)))
+    obj_rows = {}
     if args.objs:
-        pd.DataFrame([x for r in res for x in r[3]]).to_parquet(os.path.join(args.out_dir, 'objs_%s%s.parquet' % (args.sample, sfx)))
-    summ = dict(sample=args.sample, files=len(files), errors=int((F.error != '').sum()), label_unreadable_files=int(F.label_unreadable.sum()), partner_missing=int(F.partner_missing.sum()),
-                events=int(F.events.sum()), wc_events=int(F.wc_events.sum()), candidates=len(C), truth_rows=len(T), pot_hdr=float(F.pot_hdr.sum()), wall_s=round(time.time() - t0, 1))
+        for mname in L1_MODELS:
+            rows = [x for r in res for x in r[3].get(mname, [])]
+            if not rows and not any(mname in r[3] for r in res): continue
+            O = pd.DataFrame(rows); obj_rows[mname] = len(O)
+            O.to_parquet(os.path.join(args.out_dir, 'objs_%s_%s%s.parquet' % (mname, args.sample, sfx)))
+    summ = dict(sample=args.sample, files=len(files), errors=int((F.error != '').sum()), timeouts=int(F.error.str.startswith('TIMEOUT').sum()), label_unreadable_files=int(F.label_unreadable.sum()), partner_missing=int(F.partner_missing.sum()),
+                events=int(F.events.sum()), wc_events=int(F.wc_events.sum()), candidates=len(C), truth_rows=len(T), object_rows=obj_rows, pot_hdr=float(F.pot_hdr.sum()), wall_s=round(time.time() - t0, 1))
     json.dump(summ, open(os.path.join(args.out_dir, 'build_%s%s.json' % (args.sample, sfx)), 'w'), indent=1); print(json.dumps(summ))
 
 

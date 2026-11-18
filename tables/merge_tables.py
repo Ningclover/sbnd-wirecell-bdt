@@ -1,13 +1,16 @@
-"""Merge the per-job table slices of one sample into one parquet per table, and bring older slices up to the
-current builder: integer key columns, is_placeholder, truth_pf_unreadable. Files that were rebuilt later (a *_retry* slice)
+"""Merge the per-job table slices of one sample into one parquet per table (files, cands, truth, and since spec v1.2 one
+objs_<model> table per level-1 model when the slices carry them), and bring older slices up to the current builder:
+integer key columns, is_placeholder, truth_pf_unreadable. Files that were rebuilt later (a *_retry* slice)
 replace the failed rows of the same file_id. Usage: python merge_tables.py <in_dir> <sample> <out_dir>"""
 import sys, os, glob, json
 import numpy as np, pandas as pd
 SPEC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'spec'); sys.path.insert(0, SPEC); import spec_v1 as S
+from l1_models import L1_MODELS
 ind, sample, outd = sys.argv[1], sys.argv[2], sys.argv[3]; os.makedirs(outd, exist_ok=True)
 KEYS = ['run', 'subrun', 'event', 'cand', 'nu_idx']
 summary = {}
-for table in ('files', 'cands', 'truth'):
+TABLES = ['files', 'cands', 'truth'] + ['objs_' + m for m in L1_MODELS if glob.glob(os.path.join(ind, f'objs_{m}_{sample}_*.parquet'))]
+for table in TABLES:
     parts = sorted(glob.glob(os.path.join(ind, f'{table}_{sample}_*.parquet')))
     retry = [p for p in parts if '_retry' in p]; main = [p for p in parts if '_retry' not in p]
     frames = [pd.read_parquet(p) for p in main]
@@ -15,7 +18,7 @@ for table in ('files', 'cands', 'truth'):
     if retry:
         R = pd.concat([pd.read_parquet(p) for p in retry], ignore_index=True)
         redo = set(R.file_id); df = df[~df.file_id.isin(redo)] if len(df) else df; df = pd.concat([df, R], ignore_index=True)
-    for k in KEYS:
+    for k in KEYS + ['index']:
         if k in df.columns and pd.api.types.is_numeric_dtype(df[k]): df[k] = df[k].astype('int64')
     if table == 'cands' and 'is_placeholder' not in df.columns:
         df['is_placeholder'] = S.placeholder_mask(df.kine_reco_Enu, df.neutrino_type, df.reco_x, df.reco_y, df.reco_z).astype(int)
