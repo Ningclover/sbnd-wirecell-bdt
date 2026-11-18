@@ -8,15 +8,21 @@ to every object (only pio_2 has one); `flag` is the model's hand-written rule, i
 length (MicroBooNE's labelling A keeps the background objects where it fired); `score` is the pooled score stored per
 candidate by the shipped software. The 15 nu_e models are the ones round 2 retrains; the three nu_mu / cosmic ones are
 kept for completeness. `pre_cut` is the candidate-level condition under which the shipped software runs the model at all.
+
+Reader order: the TMVA reader binds inputs BY POSITION, and the order it expects is `lists + scalars` (the one scalar,
+pio_mip_id, is the last input of pio_2's weight file). A future model with a scalar in the middle must not use this
+concatenation. `protect` lists the input protections the C++ applies before evaluating (value replaced when the condition
+holds); they matter only when a retrained model is scored, never when tables are built. Checked against the 18 shipped
+weight files by wcgpu1 (project record, wcgpu/level1/scripts/check_l1_models_spec.py, 2026-11-18): all match.
 """
 
 L1_MODELS = {
  'numu_1':     dict(lists=['numu_cc_1_particle_type', 'numu_cc_1_length', 'numu_cc_1_medium_dQ_dx', 'numu_cc_1_dQ_dx_cut', 'numu_cc_1_direct_length', 'numu_cc_1_n_daughter_tracks', 'numu_cc_1_n_daughter_all'],
-                   scalars=[], flag='numu_cc_flag_1', pool='max', empty=-0.4, ntrees=850, score='numu_1_score', flavour='numu', pre_cut='cosmict_flag_1 == 0'),
+                   scalars=[], flag='numu_cc_flag_1', pool='max', empty=-0.4, ntrees=850, score='numu_1_score', flavour='numu', pre_cut='cosmict_flag_1 == 0', protect={'numu_cc_1_dQ_dx_cut': ('inf', 10.0)}),
  'numu_2':     dict(lists=['numu_cc_2_length', 'numu_cc_2_total_length', 'numu_cc_2_n_daughter_tracks', 'numu_cc_2_n_daughter_all'],
                    scalars=[], flag='numu_cc_flag_2', pool='max', empty=-0.1, ntrees=850, score='numu_2_score', flavour='numu', pre_cut='cosmict_flag_1 == 0'),
  'cosmict_10': dict(lists=['cosmict_10_vtx_z', 'cosmict_10_flag_shower', 'cosmict_10_flag_dir_weak', 'cosmict_10_angle_beam', 'cosmict_10_length'],
-                   scalars=[], flag='cosmict_flag_10', pool='min', empty=0.7, ntrees=400, score='cosmict_10_score', flavour='cosmic', pre_cut='cosmict_flag_1 == 0'),
+                   scalars=[], flag='cosmict_flag_10', pool='min', empty=0.7, ntrees=400, score='cosmict_10_score', flavour='cosmic', pre_cut='cosmict_flag_1 == 0', protect={'cosmict_10_angle_beam': ('nan', 0.0)}),
  'br3_3':      dict(lists=['br3_3_v_energy', 'br3_3_v_angle', 'br3_3_v_dir_length', 'br3_3_v_length'],
                    scalars=[], flag='br3_3_v_flag', pool='min', empty=0.3, ntrees=850, score='br3_3_score', flavour='nue', pre_cut=''),
  'br3_5':      dict(lists=['br3_5_v_dir_length', 'br3_5_v_total_length', 'br3_5_v_flag_avoid_muon_check', 'br3_5_v_n_seg', 'br3_5_v_angle', 'br3_5_v_sg_length', 'br3_5_v_energy', 'br3_5_v_n_segs', 'br3_5_v_shower_main_length', 'br3_5_v_shower_total_length'],
@@ -48,4 +54,5 @@ L1_MODELS = {
  'tro_5':      dict(lists=['tro_5_v_max_angle', 'tro_5_v_min_angle', 'tro_5_v_max_length', 'tro_5_v_iso_angle', 'tro_5_v_n_vtx_segs', 'tro_5_v_min_count', 'tro_5_v_max_count', 'tro_5_v_energy'],
                    scalars=[], flag='tro_5_v_flag', pool='min', empty=0.5, ntrees=850, score='tro_5_score', flavour='nue', pre_cut=''),
 }
+for _d in L1_MODELS.values(): _d.setdefault('protect', {})
 NUE_L1 = [m for m, d in L1_MODELS.items() if d['flavour'] == 'nue']   # the 15 of the nu_e tagger, in the shipped order
