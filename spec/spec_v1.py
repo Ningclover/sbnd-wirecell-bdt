@@ -99,6 +99,16 @@ def true_signal_mask(pdg, ccnc, vx, vy, vz, edep_mev):
     """Efficiency denominator, a pure truth count over T_truth_nu rows: nu_e/anti-nu_e CC, true vertex in FV, > 75 MeV."""
     return (np.abs(np.asarray(pdg)) == 12) & (np.asarray(ccnc) == 0) & in_fv(vx, vy, vz) & (np.asarray(edep_mev, float) > EDEP_MIN_MEV)
 
+def split_v11(sample, run, subrun):
+    """spec_v1.1 (2026-11-18, user decision): on Aurora every row trains except a fixed development slice used only to
+    choose settings (early stopping, depth, weights). 'dev' = subrun % 10 == 0 for MC; beam-off training half (all subrun 1):
+    run % 10 == 1. Everything else 'train'. Evaluation happens only on the Fermilab (fg1) production at gpvm."""
+    sample = np.asarray(sample, dtype=object); run = np.asarray(run, int); subrun = np.asarray(subrun, int)
+    out = np.where(subrun % 10 == 0, 'dev', 'train').astype(object)
+    bo = np.char.startswith(sample.astype(str), 'fg1-beam-off-train')
+    out[bo] = np.where(run[bo] % 10 == 1, 'dev', 'train')
+    return out
+
 def split(sample, run, subrun):
     """'train' or 'test'. MC: even subrun = train, odd = test (per sample). Beam-off data: all of the odd-run training half
     is training input only; its own train/test split is by run (run % 4 in {1} -> test, else train), since every file has subrun 1."""

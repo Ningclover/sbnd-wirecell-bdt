@@ -76,3 +76,9 @@ Cosmic-class rates: once beam-off is in the training (round 1 on) the cosmic cla
 ## 9. What is not in v1
 
 POT and flux weights (training stays unweighted apart from the sample mix; purities for the beam need per-species weights, step 9); the nu_mu selection; any new input family (round 2+, see the extra-information discussion).
+
+## Amendment v1.1 (2026-11-18, user decision): training on all of Aurora, evaluation only on fg1
+
+- Training rows: every pool row of the four Aurora samples with a readable label, except a fixed development slice: MC subrun % 10 == 0, beam-off training half run % 10 == 1 (`spec_v1.split_v11`, about 10 %). The slice is used only to choose settings (early stopping, depth, sample weights); the final model is retrained on 100 % with the chosen settings.
+- Evaluation: only on the Fermilab fg1 production at gpvm (hold-out files removed), with the shipped score next to the new score; the number to beat is the shipped model on fg1, computed at step 8, and the final judgement is step 9 with the evaluation standard. Numbers measured on Aurora are development numbers.
+- The v1 even/odd split stays defined (`spec_v1.split`) and is what rounds 0 and 1 used. Before any retraining under v1.1, the round 1 model and the shipped score are evaluated with `evaluation/score_model.py` on both productions (Aurora test half; an fg1 sample at gpvm) to check that the two productions are consistent.
