@@ -251,6 +251,15 @@ def extract(path, sample, file_id, want_objs=False, root=None):
     return out, cands, truth, objs
 
 
+def _empty_objs(mname):
+    """An object table with no rows still carries its schema (a model that fired nowhere in a slice is the normal case for
+    the rare nu_mu / cosmic ones), so readers and the merge need no special case."""
+    md = L1_MODELS[mname]
+    cols = {'sample': 'object', 'file_id': 'object', 'run': 'int64', 'subrun': 'int64', 'event': 'int64', 'cand': 'int64', 'index': 'int64'}
+    for n in md['lists'] + md['scalars'] + ['flag']: cols[n] = 'float64'
+    return pd.DataFrame({c: pd.Series(dtype=t) for c, t in cols.items()})
+
+
 class _Timeout(BaseException):   # not Exception: the handlers inside extract() must not swallow it
     pass
 
@@ -310,7 +319,7 @@ def main():
         for mname in L1_MODELS:
             rows = [x for r in res for x in r[3].get(mname, [])]
             if not rows and not any(mname in r[3] for r in res): continue
-            O = pd.DataFrame(rows); obj_rows[mname] = len(O)
+            O = pd.DataFrame(rows) if rows else _empty_objs(mname); obj_rows[mname] = len(O)
             O.to_parquet(os.path.join(args.out_dir, 'objs_%s_%s%s.parquet' % (mname, args.sample, sfx)))
     summ = dict(sample=args.sample, files=len(files), errors=int((F.error != '').sum()), timeouts=int(F.error.str.startswith('TIMEOUT').sum()), label_unreadable_files=int(F.label_unreadable.sum()), partner_missing=int(F.partner_missing.sum()),
                 events=int(F.events.sum()), wc_events=int(F.wc_events.sum()), candidates=len(C), truth_rows=len(T), object_rows=obj_rows, pot_hdr=float(F.pot_hdr.sum()), wall_s=round(time.time() - t0, 1))
