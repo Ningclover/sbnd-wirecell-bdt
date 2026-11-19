@@ -5,6 +5,9 @@ the decided weights and early stopping.
 Rows: pool candidates (spec_v1.pool_mask), label spec_v1.signal_mask, split spec_v1.split_v11 (train / dev). Inputs: the 258
 of spec/nue_l2_inputs_258.txt; in the two-level variant the 15 <model>_score columns are replaced by l1_<model> from the
 stage-1 scores file (NaN where the candidate has no object or fails the model's pre-cut; xgboost treats NaN as missing).
+With --l1-chain-transform TABLE (round 4 chain release, issue #22) each l1_<model> is instead the value the Wire-Cell chain
+stores with the TMVA-converted small model: float32(tanh(scale * margin + offset)), and the model's empty constant where the
+margin is NaN, so the final model never sees a missing level-1 value and converts to TMVA XML exactly.
 
 Weights (user decision 2026-11-19): each row carries its sample's exposure weight at the BNB POT (--weights); then the signal
 rows are rescaled so that signal holds the fraction --floor of the total weight (the floor on the nu_e signal share;
@@ -69,6 +72,7 @@ def dev_report(score, D, e0, cut=None):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[]); ap.add_argument('--drop-filtered-spills', metavar='BNB_SAMPLE', help='drop from this sample the spills the nu_e-filtered sample covers (no double counting)'); ap.add_argument('--drop-inputs', nargs='*', default=[], help='input names left out of the final model (e.g. gap_n_bad)')
+    ap.add_argument('--l1-chain-transform', metavar='TABLE', help="json {models: {m: {scale, offset, empty_value}}}: l1 inputs as the chain stores them (no NaN)")
     ap.add_argument('--variants', nargs='*', default=['two-level', 'level2-only']); ap.add_argument('--depth', nargs='*', type=int, default=[10, 30]); ap.add_argument('--floor', nargs='*', type=float, default=[0.333, 0.5])
     ap.add_argument('--lr', type=float, default=0.1); ap.add_argument('--max-trees', type=int, default=2000); ap.add_argument('--patience', type=int, default=50); ap.add_argument('--nthread', type=int, default=96); ap.add_argument('--seed', type=int, default=5)
     a = ap.parse_args(); os.makedirs(a.out_dir, exist_ok=True)
@@ -76,6 +80,12 @@ def main():
     for kv in a.weights: k, v = kv.split('='); W[k] = float(v)
     t0 = time.time(); C = load(a.merged_dir, a.samples, W, a.drop_filtered_spills)
     L1 = pd.read_parquet(a.l1_scores); C = C.merge(L1[KEY + ['l1_' + m for m in NUE_L1]], on=KEY, how='left')
+    if a.l1_chain_transform:
+        T = json.load(open(a.l1_chain_transform))['models']
+        for m in NUE_L1:
+            x = C['l1_' + m].to_numpy(np.float64); t = T[m]
+            C['l1_' + m] = np.where(np.isnan(x), np.float32(t['empty_value']), np.tanh(t['scale'] * x + t['offset']).astype(np.float32)).astype(np.float32)
+        print('l1 inputs as the chain stores them (%s); empty share per model: %s' % (a.l1_chain_transform, ' '.join('%s %.3f' % (m, (C['l1_' + m] == np.float32(T[m]['empty_value'])).mean()) for m in NUE_L1)), flush=True)
     tr, dv = C[C.split == 'train'], C[C.split == 'dev']
     print('pool train %d (%d signal) dev %d (%d signal); l1 scores present for %.1f %% of pool rows (any model); %.0f s' % (len(tr), tr.y.sum(), len(dv), dv.y.sum(), 100 * C[['l1_' + m for m in NUE_L1]].notna().any(axis=1).mean(), time.time() - t0), flush=True)
     e0, p0, _ = weighted_eff_pur(dv.nue_score.to_numpy(), dv.y.to_numpy(), dv.w_exp.to_numpy(), 7.0)
