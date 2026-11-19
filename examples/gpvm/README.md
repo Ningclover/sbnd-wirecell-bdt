@@ -83,6 +83,10 @@ sed 's|^<MOUNT_PREFIX>|<XROOTD_PREFIX>|' <mounted list> > <LISTS>/<sample>.txt
    A slice is done when its `build_<sample>_<a>_<b>.json` is in the output folder. `copyfail_<sample>_<a>_<b>.txt`
    lists inputs that could not be copied; they are absent from that slice's tables. Each job also leaves
    `timing_<sample>_<a>_<b>.json`: seconds for the copy-in and for the build, bytes copied, the worker and its CPU.
+   A slice is complete only when all its files are there (the same number for every slice), not when the build
+   summary alone is: check that before merging. A job cannot replace a file in the output area (its token may upload,
+   not delete), so the job never overwrites; after a copy that reported an error it compares the size at the destination.
+   To rerun single slices, submit with `-e SLICES=<n1>,<n2>,...` and `-N <how many>` into a new output folder.
 
 4. Follow the jobs and keep the time record. Run this in `tmux` right after submitting; it polls the queue once a
    minute until it is empty and writes the queue history and every state change of every job:
@@ -99,15 +103,10 @@ sed 's|^<MOUNT_PREFIX>|<XROOTD_PREFIX>|' <mounted list> > <LISTS>/<sample>.txt
    python3 <REPO>/tables/merge_tables.py <folder with the slices> <sample> <OUT>/merged
    ```
 
-Status of these scripts: this job pattern built 4,000 merged CAFs on FermiGrid in 40 jobs of 100 files (no held or
-failed job, no failed copy), and the tables are identical to a build of the same files on the interactive node. That
-run used a submit script written for it; `submit_tables.sh` here carries the same options but has itself only been
-used with `--dry-run`.
-
-What that run cost, to plan with: all jobs started within about 3 minutes and the last one was done 21 minutes after
-submission. Per file, the copy-in took 1.0 to 1.3 s and the build 2.7 to 8.5 s depending on the worker's CPU (4.7 s
-on average), so allow about 6 s per file and a factor of two between workers. Merging and scoring 4,000 files' tables
-afterwards took under two minutes.
+Status of these scripts: this job pattern built 62,844 merged CAFs of six samples on FermiGrid in 632 jobs of 100
+files, with `--objs`, in 42 minutes. 8 of those jobs stopped while copying out, because an output file was retried with
+overwrite; the copy-out step here is the corrected one, and the 8 slices were rerun with it. That run used a submit
+script written for it; `submit_tables.sh` here carries the same options but has itself only been used with `--dry-run`.
 
 ## The evaluation standard
 
