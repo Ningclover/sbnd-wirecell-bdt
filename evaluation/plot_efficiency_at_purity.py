@@ -19,11 +19,11 @@ def main():
     cols = ['C%d' % i for i in range(len(labels))]
     ax.barh(y, eff, color=cols, alpha=0.85, height=0.6)
     ax.errorbar(eff, y, xerr=[eff - lo, hi - eff], fmt='none', ecolor='k', capsize=4, lw=1.2)
-    for yi, e, l, h in zip(y, eff, lo, hi): ax.text(e + 0.3, yi, '%.1f %%  (%.1f to %.1f)' % (e, l, h), va='center', fontsize=9)
+    for yi, e, l, h in zip(y, eff, lo, hi): ax.text(h + 0.8, yi, '%.1f %%  (%.1f to %.1f)' % (e, l, h), va='center', fontsize=9)
     ref = eff[0]; ax.axvline(ref, color='C0', ls='--', lw=1, alpha=0.8)
     ax.set_yticks(y); ax.set_yticklabels(labels); ax.set_xlabel('nueCC efficiency after all cuts [%%], at %.0f %% purity' % P)
-    ax.set_xlim(0, max(hi) + 12); ax.grid(axis='x', ls='--', alpha=0.5); ax.set_axisbelow(True)
-    ax.set_title(a.title or 'Same purity (%.0f %%), compare the efficiency; fg1, BNB MC + nueCC-filtered MC at the BNB POT' % P, fontsize=10)
+    ax.set_xlim(0, max(hi) + 18); ax.grid(axis='x', ls='--', alpha=0.5); ax.set_axisbelow(True)
+    ax.set_title(a.title or 'Same purity (%.0f %%), compare the efficiency\nfg1, BNB MC + nueCC-filtered MC at the BNB POT' % P, fontsize=10)
     fig.tight_layout(); fig.savefig(a.out, dpi=130); print('wrote', a.out)
     if a.curves:
         fig, ax = plt.subplots(figsize=(8, 4.5))
