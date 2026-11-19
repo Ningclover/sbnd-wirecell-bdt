@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('scan'); ap.add_argument('--out', default='efficiency_at_purity.png'); ap.add_argument('--curves'); ap.add_argument('--title', default='')
-    a = ap.parse_args(); d = json.load(open(a.scan)); P = 100 * d['target_purity']; M = d['models']
+    ap = argparse.ArgumentParser(); ap.add_argument('scan'); ap.add_argument('--out', default='efficiency_at_purity.png'); ap.add_argument('--curves'); ap.add_argument('--title', default=''); ap.add_argument('--drop', nargs='*', default=[], help='score columns (keys of the scan file) to leave out')
+    a = ap.parse_args(); d = json.load(open(a.scan)); P = 100 * d['target_purity']; M = {k: v for k, v in d['models'].items() if k not in a.drop}
     labels = [m['label'] for m in M.values()]; eff = np.array([100 * m['efficiency'] for m in M.values()])
     lo = np.array([100 * m['efficiency_if_purity_minus_err'] for m in M.values()]); hi = np.array([100 * m['efficiency_if_purity_plus_err'] for m in M.values()])
     fig, ax = plt.subplots(figsize=(7.5, 3.8)); y = np.arange(len(labels))[::-1]
