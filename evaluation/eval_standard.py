@@ -22,6 +22,13 @@ otherwise). --drop-repeated-keys drops events whose (run, subrun, event) is held
   on aurora-r2 the filtered samples keep the first event of only one subrun in twelve, so their header POT is 12 times too
   small (nuecc 4.74e20 against 5.76e21; ncdr 4.90e19 against 3.24e21) while BNB agrees to 5 %; use hist there.
 --pot SAMPLE=VALUE overrides one sample's POT outright (a catalog value).
+--offbeam SAMPLE adds the in-time cosmic background to the purity (the recipe of L. Yates and J. Zennamo, 2025-04-24, which the
+  report's figure leaves out): the beam-off sample's candidates, all background, enter the purity denominator with the
+  weight (1 - f) * G_on / G_off, scaled to the BNB POT by POT_bnb / POT_on, where G_on and POT_on are the beam-on data's gates
+  and POT (--onbeam-gates, --onbeam-pot, from the data's CAF headers or the catalog), G_off the beam-off sample's gates (its
+  files table, n_offbeam_gates) and f = --f-nu-gate (0.0725, the report's value). The efficiency is unchanged (truth loop,
+  MC only). Both purities are reported: with the cosmic term and MC only. Use the beam-off EVALUATION half, never files that
+  trained a model.
 """
 import argparse, json, os, sys
 import numpy as np, pandas as pd
@@ -46,7 +53,7 @@ def load(d, sample, score, file_ids):
     info = dict(files=int(len(F)), files_with_error=int((F.error != '').sum()), label_unreadable_files=int(F.label_unreadable.sum()),
                 events=int(ok.events.sum()), wc_events=int(ok.wc_events.sum()), pot_hdr=float(ok.pot_hdr.sum()), pot_total_hist=float(ok.pot_total_hist.sum()),
                 candidate_rows=int(len(C)), truth_rows=int(len(T)))
-    C = C[C.label_unreadable == 0]; T = T[T.label_unreadable == 0]
+    C = C[C.label_unreadable == 0]; T = T[T.label_unreadable == 0] if 'label_unreadable' in T.columns else T   # a data sample's truth table is empty
     # files whose T_truth_pf could not be read have no true lepton: their neutrinos cannot enter the e500 signal (counted here)
     info['truth_pf_unreadable_files'] = int(F.truth_pf_unreadable.sum()) if 'truth_pf_unreadable' in F.columns else 0
     ph = spec_v1.placeholder_mask(C.kine_reco_Enu, C.neutrino_type, C.reco_x, C.reco_y, C.reco_z)
@@ -94,6 +101,7 @@ def main():
     ap.add_argument('--score', default='nue_score'); ap.add_argument('--cut', type=float, default=7.0); ap.add_argument('--classes', default='nueCC,nueCC_e500')
     ap.add_argument('--drop-repeated-keys', action='store_true'); ap.add_argument('--file-ids'); ap.add_argument('--out')
     ap.add_argument('--pot-source', choices=['hdr', 'hist'], default='hdr'); ap.add_argument('--pot', action='append', default=[], help='SAMPLE=VALUE, overrides the POT of that sample')
+    ap.add_argument('--offbeam', help='beam-off sample for the in-time cosmic term of the purity'); ap.add_argument('--onbeam-pot', type=float); ap.add_argument('--onbeam-gates', type=float); ap.add_argument('--f-nu-gate', type=float, default=0.0725)
     a = ap.parse_args()
     ids = None if not a.file_ids else set(l.strip() for l in open(a.file_ids) if l.strip())
     res = dict(score=a.score, cut=a.cut, samples={}, classes={}); parts = []
@@ -111,11 +119,19 @@ def main():
             k, v = ov.split('='); pot = float(v) if k == sample else pot
         info['pot_used'] = pot; info['candidates_used'] = int(len(C)); res['samples'][sample] = info; parts.append([name, C, T, pot])
     w = {'bnb': 1.0, 'nuecc': parts[0][3] / parts[1][3]}; res['weights'] = w; res['pot_source'] = a.pot_source; res['pot_overrides'] = a.pot
+    if a.offbeam:
+        if not (a.onbeam_pot and a.onbeam_gates): raise SystemExit('--offbeam needs --onbeam-pot and --onbeam-gates')
+        Fo, Co, To, info = load(a.table_dir, a.offbeam, a.score, ids); g_off = float(Fo[Fo.error == ''].n_offbeam_gates.sum())
+        w['offbeam'] = (1.0 - a.f_nu_gate) * a.onbeam_gates / g_off * (parts[0][3] / a.onbeam_pot)
+        info.update(offbeam_gates=g_off, onbeam_gates=a.onbeam_gates, onbeam_pot=a.onbeam_pot, f_nu_gate=a.f_nu_gate, candidates_used=int(len(Co))); res['samples'][a.offbeam] = info
+        parts.append(['offbeam', Co, To, None]); print('cosmic term: %s, %d candidates, %.0f gates; weight at the BNB POT %.5g' % (a.offbeam, len(Co), g_off, w['offbeam']))
     print('samples: ' + json.dumps(res['samples'])); print('weights: bnb 1, nuecc %.7g' % w['nuecc'])
     for cls in a.classes.split(','):
         steps = steps_for(cls, a.score, a.cut); rows = []; binned = []
         pre = []
         for name, C, T, _ in parts:
+            if name == 'offbeam':   # no truth: nothing to match, every candidate is background; enters the purity only
+                rm = C.copy(); rm['signal'] = False; tm = rm.iloc[0:0].assign(matched=np.zeros(0, bool), E=np.zeros(0)); pre.append((name, tm, rm)); continue
             sig = T[true_signal(T, cls)].copy()
             tm = sig.merge(C, left_on=EV + ['nu_ct_cand_index'], right_on=EV + ['cand'], how='left', suffixes=('', '_c'))
             tm['matched'] = (tm.nu_ct_cand_index >= 0) & (tm.nu_ct_iou_n > 0) & tm.cand.notna()
@@ -132,9 +148,13 @@ def main():
                 sel = rm[pr]
                 eff.append((pt, w[name])); pur.append((sel.signal.to_numpy(), w[name]))
                 effb.append((1000.0 * tm.E.to_numpy(), pt, w[name])); purb.append((sel.kine_reco_Enu.to_numpy(), sel.signal.to_numpy(), w[name]))
-            fe, ee, nsig, ksig, rke, rne = wfrac(eff); fp, ep, nsel, ksel, rkp, rnp = wfrac(pur)
-            rows.append(dict(step=steps[k][0], efficiency=fe, efficiency_err=ee, signal_kept=ksig, signal=nsig, raw_eff=[rke, rne],
-                             purity=fp, purity_err=ep, signal_selected=ksel, selected=nsel, raw_pur=[rkp, rnp]))
+            fe, ee, nsig, ksig, rke, rne = wfrac([x for x, (n, _, _) in zip(eff, pre) if n != 'offbeam']); fp, ep, nsel, ksel, rkp, rnp = wfrac(pur)
+            row = dict(step=steps[k][0], efficiency=fe, efficiency_err=ee, signal_kept=ksig, signal=nsig, raw_eff=[rke, rne],
+                       purity=fp, purity_err=ep, signal_selected=ksel, selected=nsel, raw_pur=[rkp, rnp])
+            if a.offbeam:
+                fm, em, nm, km, _, _ = wfrac([x for x, (n, _, _) in zip(pur, pre) if n != 'offbeam']); io = [n for n, _, _ in pre].index('offbeam')
+                row.update(purity_mc_only=fm, purity_mc_only_err=em, selected_mc_only=nm, cosmic_selected=float(w['offbeam'] * len(pur[io][0])), cosmic_selected_raw=int(len(pur[io][0])))
+            rows.append(row)
             b = dict(step=steps[k][0], edges_mev=EDGES, efficiency_vs_true_E=[], purity_vs_reco_E=[])
             for lo, hi in zip(EDGES[:-1], EDGES[1:]):
                 b['efficiency_vs_true_E'].append(wfrac([(p[(x > lo) & (x <= hi)], ww) for x, p, ww in effb])[:2])
@@ -144,6 +164,7 @@ def main():
         print('\n=== %s   (BNB MC + nueCC-filtered MC; counts at the BNB POT)' % cls)
         print('%-28s %-16s %-20s %-16s %-24s %s' % ('step', 'efficiency', 'signal kept / signal', 'purity', 'signal sel. / selected', 'raw eff, raw pur'))
         for r in rows:
+            if a.offbeam: print('%-28s cosmic term: %.1f selected (%d raw) of %.1f; purity with cosmics %.1f %%, MC only %.1f %%' % (r['step'], r['cosmic_selected'], r['cosmic_selected_raw'], r['selected'], 100 * r['purity'], 100 * r['purity_mc_only']))
             print('%-28s %5.1f +- %-6.1f %9.1f / %-9.1f %5.1f +- %-6.1f %9.1f / %-13.1f %d/%d, %d/%d' % (r['step'], 100 * r['efficiency'], 100 * r['efficiency_err'], r['signal_kept'], r['signal'],
                   100 * r['purity'], 100 * r['purity_err'], r['signal_selected'], r['selected'], r['raw_eff'][0], r['raw_eff'][1], r['raw_pur'][0], r['raw_pur'][1]))
         last = binned[-1]
