@@ -47,11 +47,10 @@ def rows_for(C, d, m, samples, label):
     keep = keep[KEY + ['sig', 'split', 'w_exp', 'sample', md['score']]]
     O = pd.concat([pd.read_parquet(os.path.join(d, 'objs_%s_%s.parquet' % (m, s)), columns=KEY + cols + ['flag']) for s in samples], ignore_index=True)
     O = O.merge(keep, on=KEY, how='inner')
-    sgn = O.sig.to_numpy(bool); numu = md['flavour'] != 'nue'
-    fired = (O.flag.to_numpy() == 1) if numu else (O.flag.to_numpy() == 0)
+    sgn = O.sig.to_numpy(bool); ra = md['rule_a']; fired = (O.flag.to_numpy() == ra['fired'])
     if label == 'B': use = np.ones(len(O), bool)
-    elif numu: use = (~sgn) | fired
-    else: use = sgn | fired
+    elif ra['narrows'] == 'signal': use = (~sgn) | fired      # rule narrows the signal side (numu_1, numu_2)
+    else: use = sgn | fired                                  # rule narrows the background side (the 15 nu_e models, cosmict_10)
     O['use'] = use; O['y'] = O.sig.astype(int)
     return O, cols, keep
 

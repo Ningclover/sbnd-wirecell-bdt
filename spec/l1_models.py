@@ -55,4 +55,14 @@ L1_MODELS = {
                    scalars=[], flag='tro_5_v_flag', pool='min', empty=0.5, ntrees=850, score='tro_5_score', flavour='nue', pre_cut=''),
 }
 for _d in L1_MODELS.values(): _d.setdefault('protect', {})
+
+# MicroBooNE's labelling rule, per model (wcgpu1's audit of the MicroBooNE trainers, uboone_nusel_app/apps/*.cxx; project record,
+# issue #14, 2026-11-19): `narrows` says which side the rule flag restricts, `fired` which flag value restricts it; the other side
+# is unrestricted (beyond the model's pre_cut, which sits on both sides). Three of the four combinations occur:
+#   the 15 nu_e models: background objects kept only where flag == 0; every signal object kept.
+#   numu_1, numu_2:     signal objects kept only where flag == 1; every background object kept.
+#   cosmict_10:         background objects kept only where flag == 1; every signal object kept (neither of the two groups above).
+RULE_A = {m: dict(narrows='background', fired=0) for m in L1_MODELS if L1_MODELS[m]['flavour'] == 'nue'}
+RULE_A.update(numu_1=dict(narrows='signal', fired=1), numu_2=dict(narrows='signal', fired=1), cosmict_10=dict(narrows='background', fired=1))
+for _m, _r in RULE_A.items(): L1_MODELS[_m]['rule_a'] = _r
 NUE_L1 = [m for m, d in L1_MODELS.items() if d['flavour'] == 'nue']   # the 15 of the nu_e tagger, in the shipped order

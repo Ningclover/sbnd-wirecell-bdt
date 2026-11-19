@@ -42,11 +42,10 @@ def main():
             for sp in ('train', 'dev'):
                 o = O[O.split == sp]
                 for lab in ('A', 'B'):
-                    sgn = o.sig.to_numpy(bool); numu = md['flavour'] != 'nue'
-                    fired = (o.flag.to_numpy() == 1) if numu else (o.flag.to_numpy() == 0)
+                    sgn = o.sig.to_numpy(bool); ra = md['rule_a']; fired = (o.flag.to_numpy() == ra['fired'])
                     if lab == 'B': is_s, is_b = sgn, ~sgn
-                    elif numu:     is_s, is_b = sgn & fired, ~sgn
-                    else:          is_s, is_b = sgn, (~sgn) & fired
+                    elif ra['narrows'] == 'signal': is_s, is_b = sgn & fired, ~sgn        # numu_1, numu_2
+                    else:                           is_s, is_b = sgn, (~sgn) & fired      # the 15 nu_e models, cosmict_10
                     is_x = ~(is_s | is_b)
                     d = acc[m][lab][sp]; d['s'] += int(is_s.sum()); d['b'] += int(is_b.sum()); d['x'] += int(is_x.sum()); d['s_w'] += W[s] * is_s.sum(); d['b_w'] += W[s] * is_b.sum()
                     out['models'].setdefault(m, {}).setdefault(s, {}).setdefault(lab, {})[sp] = dict(s=int(is_s.sum()), b=int(is_b.sum()), x=int(is_x.sum()))
