@@ -10,7 +10,9 @@ The version of `../nue_round4_ruleA/` that runs in the Wire-Cell chain with **no
   settings, seed and development slice as v1. It never sees a missing value, so it converts to TMVA XML exactly.
   Also `l2/nue_l2_nogap.json`: the same without `gap_n_bad` (257 inputs, 78 trees, signal share 1/3).
 - **Output:** raw margin; the converted file writes it directly into `nue_score`.
-- **Operating point:** to be set at 82 % purity by the Fermilab evaluation (pending).
+- **Operating point (82 % purity, Fermilab evaluation, gpvm 2026-11-19):** main cut **3.06**: νe CC efficiency **56.5 %**
+  (55.6–57.3), e500 65.7 % / 79.9 %; without gap_n_bad cut **2.43**: 54.9 % (53.5–55.8). v1 gave 56.1 % / 55.8 %; the
+  differences are inside the ~1 point the cut can move. Shipped weights: 54.2 % (cut 6.90). Data agree with the prediction.
 
 Scoring from the builder's tables, with the transform applied from the manifest:
 `python release/score_release.py releases/nue_round4_ruleA_v2 TABLE_DIR SAMPLE [--variant nogap]`.

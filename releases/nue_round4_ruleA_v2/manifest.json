@@ -1167,5 +1167,8 @@
     "max_abs_diff_vs_training_file": 0.0
    }
   }
- }
+ },
+ "operating_cut": 3.06,
+ "operating_cut_nogap": 2.43,
+ "operating_point": "82 % nueCC purity on the Fermilab evaluation samples of WCLocal2026Nov16 (gpvm, 2026-11-19)"
 }

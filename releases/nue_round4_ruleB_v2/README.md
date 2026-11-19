@@ -10,7 +10,8 @@ The version of `../nue_round4_ruleB/` that runs in the Wire-Cell chain with **no
   settings, seed and development slice as v1. It never sees a missing value, so it converts to TMVA XML exactly.
   
 - **Output:** raw margin; the converted file writes it directly into `nue_score`.
-- **Operating point:** to be set at 82 % purity by the Fermilab evaluation (pending).
+- **Operating point (82 % purity, Fermilab evaluation, gpvm 2026-11-19):** cut **3.23**: νe CC efficiency **55.3 %**
+  (54.5–56.5), e500 65.2 % / 79.3 % (v1: 54.9 %). Shipped weights: 54.2 % (cut 6.90). Data agree with the prediction.
 
 Scoring from the builder's tables, with the transform applied from the manifest:
 `python release/score_release.py releases/nue_round4_ruleB_v2 TABLE_DIR SAMPLE [--variant nogap]`.
