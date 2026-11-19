@@ -48,6 +48,9 @@ def main():
     names = [('l1_' + NUE_L1[SHIPPED.index(n)] if n in SHIPPED else n) for n in NAMES] if a.variant == 'two-level' else list(NAMES)
     kept = {m: float(r['kept_lr']) for m, r in json.load(open(os.path.join(a.model_dir, 'train_l1.json')))['models'].items()} if a.variant == 'two-level' else {}
     l2, ir2 = load_booster(os.path.join(a.model_dir, a.l2), a.nthread)
+    if l2.feature_names:   # the inputs the model was trained on (a model may leave some out, train_l2.py --drop-inputs)
+        if set(l2.feature_names) - set(names): raise SystemExit('model inputs not in the %s input list: %s' % (a.variant, sorted(set(l2.feature_names) - set(names))))
+        names = list(l2.feature_names)
     need = list(dict.fromkeys(KEY + ['br_filled', 'is_placeholder', 'pio_filled', 'pio_flag_pio', 'cosmict_flag_1'] + NAMES))
     out = []
     for s in a.samples:

@@ -68,7 +68,7 @@ def dev_report(score, D, e0, cut=None):
     return r
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[]); ap.add_argument('--drop-filtered-spills', metavar='BNB_SAMPLE', help='drop from this sample the spills the nu_e-filtered sample covers (no double counting)')
+    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[]); ap.add_argument('--drop-filtered-spills', metavar='BNB_SAMPLE', help='drop from this sample the spills the nu_e-filtered sample covers (no double counting)'); ap.add_argument('--drop-inputs', nargs='*', default=[], help='input names left out of the final model (e.g. gap_n_bad)')
     ap.add_argument('--variants', nargs='*', default=['two-level', 'level2-only']); ap.add_argument('--depth', nargs='*', type=int, default=[10, 30]); ap.add_argument('--floor', nargs='*', type=float, default=[0.333, 0.5])
     ap.add_argument('--lr', type=float, default=0.1); ap.add_argument('--max-trees', type=int, default=2000); ap.add_argument('--patience', type=int, default=50); ap.add_argument('--nthread', type=int, default=96); ap.add_argument('--seed', type=int, default=5)
     a = ap.parse_args(); os.makedirs(a.out_dir, exist_ok=True)
@@ -87,6 +87,10 @@ def main():
         names = list(NAMES)
         if var == 'two-level':
             names = [('l1_' + NUE_L1[SHIPPED_SCORES.index(n)] if n in SHIPPED_SCORES else n) for n in NAMES]
+        if a.drop_inputs:
+            miss = [n for n in a.drop_inputs if n not in names]
+            if miss: raise SystemExit('--drop-inputs not among the inputs: %s' % miss)
+            names = [n for n in names if n not in a.drop_inputs]; print('%s: %d inputs, left out %s' % (var, len(names), a.drop_inputs), flush=True)
         Xtr, Xdv = tr[names].to_numpy(np.float32), dv[names].to_numpy(np.float32)
         for depth in a.depth:
             for floor in a.floor:
