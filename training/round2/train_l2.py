@@ -32,13 +32,16 @@ KEY = ['file_id', 'run', 'subrun', 'event', 'cand']
 NAMES = [l.strip() for l in open(os.path.join(SPEC, 'nue_l2_inputs_258.txt')) if l.strip()]
 SHIPPED_SCORES = [L1_MODELS[m]['score'] for m in NUE_L1]
 
-def load(d, samples, W):
+def load(d, samples, W, drop_spills_of=None):
     need = KEY + ['br_filled', 'reco_x', 'reco_y', 'reco_z', 'partner_kind', 'label_unreadable', 'dist_sce_cm', 'm_pdg', 'm_ccnc', 'm_vx', 'm_vy', 'm_vz', 'm_edep_mev', 'is_placeholder', 'nue_score'] + NAMES
     out = []
     for s in samples:
         C = pd.read_parquet(os.path.join(d, 'cands_%s.parquet' % s), columns=list(dict.fromkeys(need)))
         C = C[(C.is_placeholder == 0) & (C.label_unreadable == 0)]
         C = C[spec_v1.pool_mask(C.br_filled, C.reco_x, C.reco_y, C.reco_z)].copy()
+        if s == drop_spills_of:   # the BNB spills the nu_e-filtered sample stands for (spec_v1.drop_filtered_spills)
+            n0 = len(C); C, nsp = spec_v1.drop_filtered_spills(C, pd.read_parquet(os.path.join(d, 'truth_%s.parquet' % s), columns=spec_v1.SPILL_KEY + ['pdg', 'ccnc', 'vx', 'vy', 'vz']))
+            print('%s: %d filtered spills dropped, %d of %d pool rows removed' % (s, nsp, n0 - len(C), n0), flush=True)
         C['y'] = spec_v1.signal_mask(C.partner_kind, C.label_unreadable, C.dist_sce_cm, C.m_pdg, C.m_ccnc, C.m_vx, C.m_vy, C.m_vz, C.m_edep_mev).astype(int)
         C['split'] = [str(x) for x in spec_v1.split_v11(np.full(len(C), s, dtype=object), C.run.to_numpy(), C.subrun.to_numpy())]
         C['w_exp'] = W[s]; C['sample'] = s; out.append(C)
@@ -65,13 +68,13 @@ def dev_report(score, D, e0, cut=None):
     return r
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[])
+    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[]); ap.add_argument('--drop-filtered-spills', metavar='BNB_SAMPLE', help='drop from this sample the spills the nu_e-filtered sample covers (no double counting)')
     ap.add_argument('--variants', nargs='*', default=['two-level', 'level2-only']); ap.add_argument('--depth', nargs='*', type=int, default=[10, 30]); ap.add_argument('--floor', nargs='*', type=float, default=[0.333, 0.5])
     ap.add_argument('--lr', type=float, default=0.1); ap.add_argument('--max-trees', type=int, default=2000); ap.add_argument('--patience', type=int, default=50); ap.add_argument('--nthread', type=int, default=96); ap.add_argument('--seed', type=int, default=5)
     a = ap.parse_args(); os.makedirs(a.out_dir, exist_ok=True)
     W = {s: 1.0 for s in a.samples}
     for kv in a.weights: k, v = kv.split('='); W[k] = float(v)
-    t0 = time.time(); C = load(a.merged_dir, a.samples, W)
+    t0 = time.time(); C = load(a.merged_dir, a.samples, W, a.drop_filtered_spills)
     L1 = pd.read_parquet(a.l1_scores); C = C.merge(L1[KEY + ['l1_' + m for m in NUE_L1]], on=KEY, how='left')
     tr, dv = C[C.split == 'train'], C[C.split == 'dev']
     print('pool train %d (%d signal) dev %d (%d signal); l1 scores present for %.1f %% of pool rows (any model); %.0f s' % (len(tr), tr.y.sum(), len(dv), dv.y.sum(), 100 * C[['l1_' + m for m in NUE_L1]].notna().any(axis=1).mean(), time.time() - t0), flush=True)

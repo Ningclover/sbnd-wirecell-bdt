@@ -28,7 +28,7 @@ import spec_v1
 from l1_models import L1_MODELS, NUE_L1
 KEY = ['file_id', 'run', 'subrun', 'event', 'cand']
 
-def load_cands(d, samples, W):
+def load_cands(d, samples, W, drop_spills_of=None):
     need = KEY + ['br_filled', 'reco_x', 'reco_y', 'reco_z', 'partner_kind', 'label_unreadable', 'dist_sce_cm', 'm_pdg', 'm_ccnc', 'm_vx', 'm_vy', 'm_vz', 'm_edep_mev',
                   'pio_filled', 'pio_flag_pio', 'cosmict_flag_1'] + [L1_MODELS[m]['score'] for m in L1_MODELS]
     out = []
@@ -36,6 +36,9 @@ def load_cands(d, samples, W):
         C = pd.read_parquet(os.path.join(d, 'cands_%s.parquet' % s), columns=need)
         C = C[C.label_unreadable == 0]
         C = C[spec_v1.pool_mask(C.br_filled, C.reco_x, C.reco_y, C.reco_z)].copy()
+        if s == drop_spills_of:   # the BNB spills the nu_e-filtered sample stands for (spec_v1.drop_filtered_spills)
+            n0 = len(C); C, nsp = spec_v1.drop_filtered_spills(C, pd.read_parquet(os.path.join(d, 'truth_%s.parquet' % s), columns=spec_v1.SPILL_KEY + ['pdg', 'ccnc', 'vx', 'vy', 'vz']))
+            print('%s: %d filtered spills dropped, %d of %d pool rows removed' % (s, nsp, n0 - len(C), n0), flush=True)
         C['sig'] = spec_v1.signal_mask(C.partner_kind, C.label_unreadable, C.dist_sce_cm, C.m_pdg, C.m_ccnc, C.m_vx, C.m_vy, C.m_vz, C.m_edep_mev)
         C['split'] = [str(x) for x in spec_v1.split_v11(np.full(len(C), s, dtype=object), C.run.to_numpy(), C.subrun.to_numpy())]
         C['w_exp'] = W[s]; C['sample'] = s; out.append(C)
@@ -59,13 +62,13 @@ def balanced(w, y):
     tot = w.sum(); w[s] *= 0.5 * tot / w[s].sum(); w[~s] *= 0.5 * tot / w[~s].sum(); return w
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[])
+    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[]); ap.add_argument('--drop-filtered-spills', metavar='BNB_SAMPLE', help='drop from this sample the spills the nu_e-filtered sample covers (no double counting)')
     ap.add_argument('--models', nargs='*', default=NUE_L1); ap.add_argument('--label', choices=['A', 'B'], default='A'); ap.add_argument('--lr', nargs='*', type=float, default=[0.05, 0.1, 0.3])
     ap.add_argument('--depth', type=int, default=3); ap.add_argument('--max-trees', type=int, default=2000); ap.add_argument('--patience', type=int, default=50); ap.add_argument('--nthread', type=int, default=96); ap.add_argument('--seed', type=int, default=5)
     a = ap.parse_args(); os.makedirs(a.out_dir, exist_ok=True)
     W = {s: 1.0 for s in a.samples}
     for kv in a.weights: k, v = kv.split('='); W[k] = float(v)
-    t0 = time.time(); C = load_cands(a.merged_dir, a.samples, W); print('candidates in the pool: %d (%d signal), %.0f s' % (len(C), C.sig.sum(), time.time() - t0), flush=True)
+    t0 = time.time(); C = load_cands(a.merged_dir, a.samples, W, a.drop_filtered_spills); print('candidates in the pool: %d (%d signal), %.0f s' % (len(C), C.sig.sum(), time.time() - t0), flush=True)
     res = dict(label=a.label, weights=W, depth=a.depth, lrs=a.lr, max_trees=a.max_trees, patience=a.patience, seed=a.seed, xgboost=xgb.__version__, models={})
     scores = C[KEY + ['split', 'sig']].copy()
     for m in a.models:

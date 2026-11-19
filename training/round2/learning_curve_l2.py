@@ -13,13 +13,13 @@ from train_l2 import load, floored, weighted_eff_pur, dev_report, NAMES, SHIPPED
 from l1_models import NUE_L1
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[])
+    ap = argparse.ArgumentParser(); ap.add_argument('merged_dir'); ap.add_argument('l1_scores'); ap.add_argument('out_dir'); ap.add_argument('--samples', nargs='+', required=True); ap.add_argument('--weights', nargs='*', default=[]); ap.add_argument('--drop-filtered-spills', metavar='BNB_SAMPLE')
     ap.add_argument('--fractions', nargs='*', type=float, default=[0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]); ap.add_argument('--seeds', nargs='*', type=int, default=[5, 6, 7]); ap.add_argument('--depth', type=int, default=10); ap.add_argument('--floor', type=float, default=0.5)
     ap.add_argument('--lr', type=float, default=0.1); ap.add_argument('--max-trees', type=int, default=2000); ap.add_argument('--patience', type=int, default=50); ap.add_argument('--nthread', type=int, default=96)
     a = ap.parse_args(); os.makedirs(a.out_dir, exist_ok=True)
     W = {s: 1.0 for s in a.samples}
     for kv in a.weights: k, v = kv.split('='); W[k] = float(v)
-    t0 = time.time(); C = load(a.merged_dir, a.samples, W); L1 = pd.read_parquet(a.l1_scores); C = C.merge(L1[KEY + ['l1_' + m for m in NUE_L1]], on=KEY, how='left')
+    t0 = time.time(); C = load(a.merged_dir, a.samples, W, a.drop_filtered_spills); L1 = pd.read_parquet(a.l1_scores); C = C.merge(L1[KEY + ['l1_' + m for m in NUE_L1]], on=KEY, how='left')
     tr, dv = C[C.split == 'train'], C[C.split == 'dev']
     names = [('l1_' + NUE_L1[SHIPPED_SCORES.index(n)] if n in SHIPPED_SCORES else n) for n in NAMES]
     Xdv = dv[names].to_numpy(np.float32); wdv = floored(dv.w_exp.to_numpy(), dv.y.to_numpy(), a.floor); ddv = xgb.DMatrix(Xdv, label=dv.y.to_numpy(), weight=wdv, feature_names=names, missing=np.nan)

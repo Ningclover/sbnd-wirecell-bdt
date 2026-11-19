@@ -117,3 +117,24 @@ def split(sample, run, subrun):
     bo = np.char.find(sample.astype(str), 'beam-off-train') >= 0   # fg1-beam-off-train, wcl1116-beam-off-train (the same odd-run files)
     out[bo] = np.where(run[bo] % 4 == 1, 'test', 'train')
     return out
+
+# The nu_e CC filter volume of the filtered simulation (M. Vicenzi's plots.NUECC_FILTER, inferred from the filtered sample's
+# truth): the active volume with x widened. The same numbers as evaluation/eval_standard.py's FILTER.
+NUECC_FILTER = dict(x=(-202.3, 202.3), y=(-203.73, 203.73), z=(0.0, 501.0))
+SPILL_KEY = ['file_id', 'run', 'subrun', 'event']
+
+def filtered_spills(truth):
+    """The spills (file_id, run, subrun, event) of a BNB truth table that hold a nu_e / anti-nu_e CC vertex inside the
+    filter volume. The nu_e-filtered sample stands for exactly these spills with its own, much larger exposure, so they are
+    dropped from the BNB sample whole (cosmics and any other neutrino in them included) before the two are combined; else
+    those events are counted twice (user, 2026-11-19, from round 4 on; the evaluation has always done this)."""
+    hit = ((np.abs(truth['pdg']) == 12) & (truth['ccnc'] == 0) & truth['vx'].between(*NUECC_FILTER['x'])
+           & truth['vy'].between(*NUECC_FILTER['y']) & truth['vz'].between(*NUECC_FILTER['z']))
+    return truth.loc[hit, SPILL_KEY].drop_duplicates()
+
+def drop_filtered_spills(C, truth):
+    """C without the rows whose spill is in filtered_spills(truth). Returns (kept rows, number of spills dropped)."""
+    sp = filtered_spills(truth)
+    if not len(sp): return C, 0
+    k = C[SPILL_KEY].astype({'file_id': str}).merge(sp.astype({'file_id': str}).assign(_hit=1), on=SPILL_KEY, how='left')['_hit'].isna().to_numpy()
+    return C[k], int(len(sp))
