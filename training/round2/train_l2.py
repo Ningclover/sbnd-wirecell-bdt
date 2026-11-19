@@ -97,7 +97,7 @@ def main():
                 f['dev'] = dev_report(sc, dv, e0); res['fits'][tag] = f; dev_scores[tag] = sc
                 bst.save_model(os.path.join(a.out_dir, 'l2_%s.json' % tag))
                 print('%-26s trees %5d  logloss train %.4f dev %.4f  AUC %.4f  at eff %.3f: purity %.3f (shipped %.3f)  bnb AUC %s  (%.0f s)' % (
-                    tag, nt, f['train_logloss'], f['dev_logloss'], f['dev']['auc'], f['dev']['weighted_eff'], f['dev']['weighted_purity'], p0, '%.4f' % f['dev']['auc_by_sample'].get('aurora-r2-bnb') if f['dev']['auc_by_sample'].get('aurora-r2-bnb') else '-', f['fit_s']), flush=True)
+                    tag, nt, f['train_logloss'], f['dev_logloss'], f['dev']['auc'], f['dev']['weighted_eff'], f['dev']['weighted_purity'], p0, '%.4f' % next((v for k, v in f['dev']['auc_by_sample'].items() if 'bnb' in k and v), float('nan')), f['fit_s']), flush=True)
                 json.dump(res, open(os.path.join(a.out_dir, 'train_l2.json'), 'w'), indent=1)
     dev_scores.to_parquet(os.path.join(a.out_dir, 'dev_scores.parquet')); res['wall_s'] = round(time.time() - t0, 1)
     json.dump(res, open(os.path.join(a.out_dir, 'train_l2.json'), 'w'), indent=1); print('done in %.0f s' % res['wall_s'])

@@ -101,11 +101,11 @@ def true_signal_mask(pdg, ccnc, vx, vy, vz, edep_mev):
 
 def split_v11(sample, run, subrun):
     """spec_v1.1 (2026-11-18, user decision): on Aurora every row trains except a fixed development slice used only to
-    choose settings (early stopping, depth, weights). 'dev' = subrun % 10 == 0 for MC; beam-off training half (all subrun 1):
-    run % 10 == 1. Everything else 'train'. Evaluation happens only on the Fermilab (fg1) production at gpvm."""
+    choose settings (early stopping, depth, weights). 'dev' = subrun % 10 == 0 for MC; beam-off training half (all subrun 1,
+    any sample whose name contains 'beam-off-train'): run % 10 == 1. Everything else 'train'. Evaluation happens only on the Fermilab (fg1) production at gpvm."""
     sample = np.asarray(sample, dtype=object); run = np.asarray(run, int); subrun = np.asarray(subrun, int)
     out = np.where(subrun % 10 == 0, 'dev', 'train').astype(object)
-    bo = np.char.startswith(sample.astype(str), 'fg1-beam-off-train')
+    bo = np.char.find(sample.astype(str), 'beam-off-train') >= 0   # fg1-beam-off-train, wcl1116-beam-off-train (the same odd-run files)
     out[bo] = np.where(run[bo] % 10 == 1, 'dev', 'train')
     return out
 
@@ -114,6 +114,6 @@ def split(sample, run, subrun):
     is training input only; its own train/test split is by run (run % 4 in {1} -> test, else train), since every file has subrun 1."""
     sample = np.asarray(sample, dtype=object); run = np.asarray(run, int); subrun = np.asarray(subrun, int)
     out = np.where(subrun % 2 == 0, 'train', 'test').astype(object)
-    bo = np.char.startswith(sample.astype(str), 'fg1-beam-off-train')
+    bo = np.char.find(sample.astype(str), 'beam-off-train') >= 0   # fg1-beam-off-train, wcl1116-beam-off-train (the same odd-run files)
     out[bo] = np.where(run[bo] % 4 == 1, 'test', 'train')
     return out
