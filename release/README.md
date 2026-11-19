@@ -5,4 +5,4 @@
 - `score_release.py`: scores the builder's tables with a release, from its manifest alone.
 - `compare_chain.py`: compares the scores a Wire-Cell chain run stores with the standalone release on the same events.
 
-Releases: `releases/nue_round4_ruleA/` (2026-11-19), see its README.
+Releases: round 4 (2026-11-19), three models: `releases/README.md`; `releases/nue_round4_ruleA/` (A and A-nogap), `releases/nue_round4_ruleB/` (B).

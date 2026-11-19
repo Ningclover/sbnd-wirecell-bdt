@@ -1,5 +1,7 @@
 # SBND Wire-Cell νe CC BDT, round 4, rule A (frozen 2026-11-19)
 
+One of the three round 4 models (A and A-nogap here, B in `../nue_round4_ruleB/`); read `../README.md` first.
+
 A retrained version of the Wire-Cell νe tagger BDT for SBND: the 15 per-object "small" BDTs (level 1) and the final
 candidate BDT (level 2), both retrained on SBND simulation reconstructed with Wire-Cell toolkit 0.38.0 (production
 WCLocal2026Nov16, split-move vertex tree). It replaces the MicroBooNE weights shipped with the toolkit.
