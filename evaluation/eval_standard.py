@@ -18,6 +18,10 @@ neutrinos) and counted; files with truth_pf_unreadable = 1 are counted (no true 
 --score names the candidate column holding the model score (the stored nue_score by default; a retrained model's column
 otherwise). --drop-repeated-keys drops events whose (run, subrun, event) is held by two files, as Matteo's loader does.
 --file-ids restricts both samples to the file ids listed (one per line), e.g. the lists with the hold-out files removed.
+--pot-source hdr (default, the recipe: rec.hdr.pot on the first event of each subrun) or hist (the TotalPOT histogram, MC only):
+  on aurora-r2 the filtered samples keep the first event of only one subrun in twelve, so their header POT is 12 times too
+  small (nuecc 4.74e20 against 5.76e21; ncdr 4.90e19 against 3.24e21) while BNB agrees to 5 %; use hist there.
+--pot SAMPLE=VALUE overrides one sample's POT outright (a catalog value).
 """
 import argparse, json, os, sys
 import numpy as np, pandas as pd
@@ -89,6 +93,7 @@ def main():
     ap.add_argument('table_dir'); ap.add_argument('bnb'); ap.add_argument('nuecc')
     ap.add_argument('--score', default='nue_score'); ap.add_argument('--cut', type=float, default=7.0); ap.add_argument('--classes', default='nueCC,nueCC_e500')
     ap.add_argument('--drop-repeated-keys', action='store_true'); ap.add_argument('--file-ids'); ap.add_argument('--out')
+    ap.add_argument('--pot-source', choices=['hdr', 'hist'], default='hdr'); ap.add_argument('--pot', action='append', default=[], help='SAMPLE=VALUE, overrides the POT of that sample')
     a = ap.parse_args()
     ids = None if not a.file_ids else set(l.strip() for l in open(a.file_ids) if l.strip())
     res = dict(score=a.score, cut=a.cut, samples={}, classes={}); parts = []
@@ -101,8 +106,11 @@ def main():
             info['filtered_spills_dropped'] = int(len(sp)); n0 = len(C)
             C = C[~pd.MultiIndex.from_frame(C[EV]).isin(sp)]; T = T[~pd.MultiIndex.from_frame(T[EV]).isin(sp)]
             info['candidates_after_spill_drop'] = int(len(C)); info['candidates_before_spill_drop'] = int(n0)
-        info['candidates_used'] = int(len(C)); res['samples'][sample] = info; parts.append([name, C, T, info['pot_hdr']])
-    w = {'bnb': 1.0, 'nuecc': parts[0][3] / parts[1][3]}; res['weights'] = w
+        pot = info['pot_total_hist'] if a.pot_source == 'hist' else info['pot_hdr']
+        for ov in a.pot:
+            k, v = ov.split('='); pot = float(v) if k == sample else pot
+        info['pot_used'] = pot; info['candidates_used'] = int(len(C)); res['samples'][sample] = info; parts.append([name, C, T, pot])
+    w = {'bnb': 1.0, 'nuecc': parts[0][3] / parts[1][3]}; res['weights'] = w; res['pot_source'] = a.pot_source; res['pot_overrides'] = a.pot
     print('samples: ' + json.dumps(res['samples'])); print('weights: bnb 1, nuecc %.7g' % w['nuecc'])
     for cls in a.classes.split(','):
         steps = steps_for(cls, a.score, a.cut); rows = []; binned = []
