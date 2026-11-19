@@ -51,8 +51,8 @@ Look at `errors`, `label_unreadable_files` and `partner_missing` in it before us
 
 ## On FermiGrid
 
-A worker sees only `/cvmfs` and its scratch disk. The job copies each input with `xrdcp`, builds, and copies the
-tables out. The lists in the tarball therefore hold xrootd URLs:
+A worker sees only `/cvmfs` and its scratch disk. The job copies each input with `xrdcp` (three tries), builds, and
+copies the tables out, creating the output folder. The lists in the tarball therefore hold xrootd URLs:
 
 ```bash
 sed 's|^<MOUNT_PREFIX>|<XROOTD_PREFIX>|' <mounted list> > <LISTS>/<sample>.txt
@@ -77,21 +77,36 @@ sed 's|^<MOUNT_PREFIX>|<XROOTD_PREFIX>|' <mounted list> > <LISTS>/<sample>.txt
    htgettoken -a <vault server> -i <GROUP>
    GROUP=<GROUP> bash <REPO>/examples/gpvm/submit_tables.sh <BUILD>/tables.tar.gz <sample> 100 <number of files> \
          <XROOTD_PREFIX>/<your scratch area>/<sample>          # add --dry-run to print the command only
+   # with the per-object tables of the small models: put BUILD_ARGS=--objs in front of the command
    ```
 
    A slice is done when its `build_<sample>_<a>_<b>.json` is in the output folder. `copyfail_<sample>_<a>_<b>.txt`
-   lists inputs that could not be copied; they are absent from that slice's tables. To rerun a slice, remove what it
-   left in the output folder first: the storage does not overwrite.
+   lists inputs that could not be copied; they are absent from that slice's tables. Each job also leaves
+   `timing_<sample>_<a>_<b>.json`: seconds for the copy-in and for the build, bytes copied, the worker and its CPU.
+   A slice is complete only when all its files are there (the same number for every slice), not when the build
+   summary alone is: check that before merging. A job cannot replace a file in the output area (its token may upload,
+   not delete), so the job never overwrites; after a copy that reported an error it compares the size at the destination.
+   To rerun single slices, submit with `-e SLICES=<n1>,<n2>,...` and `-N <how many>` into a new output folder.
 
-4. Merge the slices into one parquet per table:
+4. Follow the jobs and keep the time record. Run this in `tmux` right after submitting; it polls the queue once a
+   minute until it is empty and writes the queue history and every state change of every job:
+
+   ```bash
+   tmux new -s tables "bash <REPO>/examples/gpvm/monitor_jobs.sh <GROUP> <output folder as mounted> <MONITOR>"
+   # afterwards, with the slices copied to a local folder:
+   python3 <REPO>/examples/gpvm/timing_summary.py <MONITOR> <folder with the slices> submit_time.txt
+   ```
+
+5. Merge the slices into one parquet per table:
 
    ```bash
    python3 <REPO>/tables/merge_tables.py <folder with the slices> <sample> <OUT>/merged
    ```
 
-Status of these scripts: `table_job.sh` was run through `emulate.sh` in the worker image and its tables are identical
-to a direct build of the same files. `submit_tables.sh` has not been used for a production run yet; the same job
-pattern (tarball, worker image, `xrdcp` with the job's token) ran on FermiGrid in a separate test.
+Status of these scripts: this job pattern built 62,844 merged CAFs of six samples on FermiGrid in 632 jobs of 100
+files, with `--objs`, in 42 minutes. 8 of those jobs stopped while copying out, because an output file was retried with
+overwrite; the copy-out step here is the corrected one, and the 8 slices were rerun with it. That run used a submit
+script written for it; `submit_tables.sh` here carries the same options but has itself only been used with `--dry-run`.
 
 ## The evaluation standard
 
@@ -106,6 +121,11 @@ curves (`docs/evaluation_standard.md`). `--score <column>` puts a retrained mode
 
 ## Things that cost time here
 
+- Do not build by reading the merged CAFs through the storage mount. A read through the mount hung on a file that
+  was online and that `xrdcp` copied in a fraction of a second; the builder has no per-file time limit and writes
+  only at the end, so one stuck read blocked and lost a whole run. Copy with `xrdcp` first, also on the interactive
+  node (`table_job.sh` does it; run it slice by slice with `INPUT_TAR_DIR_LOCAL`, `_CONDOR_SCRATCH_DIR` and `PROCESS`
+  set by hand).
 - uproot cannot read some branches of a small fraction of files (a basket stored inside the branch header); ROOT
   reads them. The builder flags such files (`label_unreadable`, `truth_pf_unreadable`) instead of failing; count them.
 - (run, subrun, event) is not unique across the files of a filtered MC sample. Always key on `file_id` as well.
