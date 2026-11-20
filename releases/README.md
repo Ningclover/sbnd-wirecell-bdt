@@ -5,6 +5,10 @@ the shipped tagger: 15 per-object "small" BDTs (level 1), whose pooled scores fe
 three were trained on SBND simulation reconstructed with Wire-Cell toolkit 0.38.0 (production WCLocal2026Nov16, split-move
 vertex tree) and replace the MicroBooNE weights shipped with the toolkit.
 
+**Default model (2026-11-20): A v2**, chain files in `nue_round4_ruleA_v2/wirecell/main/`, cut 3.06 on `nue_score` for
+82 % purity. A-nogap v2 and B v2 are kept beside it for anyone who wants to compare; all three are frozen, checked in
+the chain and evaluated the same way (see "Inside the Wire-Cell chain" below).
+
 ## The three models
 
 | model | folder / file | small-model labels | final-model inputs | cut for 82 % purity | νe CC efficiency at 82 % purity | e500 eff. / purity |

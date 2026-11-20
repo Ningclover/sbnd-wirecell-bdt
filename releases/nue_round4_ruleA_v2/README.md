@@ -1,5 +1,7 @@
 # SBND Wire-Cell νe CC BDT, round 4, rule A, v2: chain version (2026-11-19)
 
+**The default model** (2026-11-20): `wirecell/main/`, cut 3.06. `wirecell/nogap/` (A-nogap v2) and `../nue_round4_ruleB_v2/` are kept as alternatives.
+
 The version of `../nue_round4_ruleA/` that runs in the Wire-Cell chain with **no toolkit change** (issue #22).
 
 - **Small models (`l1/`): byte-identical to v1.** wcgpu converts them to TMVA XML with a per-model rescale

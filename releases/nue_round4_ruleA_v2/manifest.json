@@ -1235,5 +1235,11 @@
    "wcgpu toolkit evaluators on 300 Aurora candidates (#29): level 1 within 3.9e-07, final within 3.9e-06 on the same level-1 values",
    "Aurora independent evaluator release/wirecell/check_chain_xml.py on the same 300: level 1 within 3.9e-07, final within 3.9e-06, none over 1e-05"
   ]
+ },
+ "default": {
+  "variant": "main",
+  "chain_dir": "wirecell/main",
+  "cut": 3.06,
+  "decided": "2026-11-20, by the user; A-nogap v2 and B v2 kept as alternatives"
  }
 }
