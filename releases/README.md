@@ -9,6 +9,10 @@ vertex tree) and replace the MicroBooNE weights shipped with the toolkit.
 82 % purity. A-nogap v2 and B v2 are kept beside it for anyone who wants to compare; all three are frozen, checked in
 the chain and evaluated the same way (see "Inside the Wire-Cell chain" below).
 
+> **νμ CC BDT (2026-11-20): `numu_round1/`.** A retrained final νμ model for SBND: 80.1 % νμ CC efficiency at 95 %
+> purity against 75.0 % for the shipped weights, with the cut at `numu_score` 1.011. It is a drop-in replacement for
+> `numu_scalars_scores_0923.xml`, with the small models unchanged. See [`numu_round1/README.md`](numu_round1/README.md).
+
 ## The three models
 
 | model | folder / file | small-model labels | final-model inputs | cut for 82 % purity | νe CC efficiency at 82 % purity | e500 eff. / purity |
