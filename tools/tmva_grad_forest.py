@@ -56,7 +56,7 @@ class TmvaGradForest:
             raise ValueError('no <Weights> element')
         head = doc[ms:head_end]
         nvar = int(re.search(rb'<Variables NVar="(\d+)"', head).group(1))
-        self.names = [m.decode() for m in re.findall(rb'<Variable Expression="([^"]*)"', head)][:nvar]
+        self.names = [m.decode() for m in re.findall(rb'<Variable\b[^>]*?\bExpression="([^"]*)"', head)][:nvar]
         if len(self.names) != nvar:
             raise ValueError('fewer <Variable> elements than NVar')
         if names is not None and list(names) != self.names:
