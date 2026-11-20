@@ -55,9 +55,41 @@ Each reproduces, to the last bit, the scores the evaluation used (checked on 211
 
 ## Inside the Wire-Cell chain
 
-The converted versions that wire-cell-toolkit runs, and the check that the chain gives the same scores as the standalone
-models on a few files (`release/compare_chain.py`), are being prepared; they will be added here as `<folder>/wirecell/`
-with the toolkit commit that reads them. Until then the models are applied to the builder's tables as above.
+The toolkit cannot hold a missing value, so the models above cannot run in the chain as they are. The **v2 folders** are
+the versions to use inside wire-cell-toolkit: same small models, final model retrained on the values the chain stores
+(each small model's output rescaled, and the toolkit's own "no object" constant for an empty list or pio_2's failed
+pre-cut). Their efficiencies agree with v1 within the cut's uncertainty.
+
+| model | folder | chain files | cut for 82 % purity (on `nue_score`) | νe CC efficiency at 82 % purity |
+|---|---|---|---:|---:|
+| shipped weights (reference) | in the toolkit | – | 6.90 | 54.2 % |
+| **A v2** | `nue_round4_ruleA_v2/` | `wirecell/main/` | **3.06** | **56.5 % (55.6–57.3)** |
+| A-nogap v2 | `nue_round4_ruleA_v2/` | `wirecell/nogap/` | 2.43 | 54.9 % (53.5–55.8) |
+| B v2 | `nue_round4_ruleB_v2/` | `wirecell/main/` | 3.23 | 55.3 % (54.5–56.5) |
+
+Efficiencies from the Fermilab evaluation (bdt-comm `results/round4/eval_fg1_v2/cuts_82.json`); data agree with the
+prediction (data/prediction 1.01, 1.06, 1.02).
+
+**To run one:** put the chain folder (for example `releases/nue_round4_ruleA_v2/wirecell/main`) in front of
+`wire-cell-data` on `WIRECELL_PATH`. Its `uboone/weights/` holds the 16 νe files under the shipped names (15
+`<model>_BDT.weights.xml` and `XGB_nue_seed2_0923.xml`); every other model still resolves to the shipped file. No change
+to the toolkit or its configuration. `nue_score` then holds the final model's raw margin, so the cut above applies to it
+directly; −15 still means the tagger did not run.
+
+**Do not leave an input empty.** The toolkit's evaluator returns −999 (stored as `nue_score` = −16.2556) if any declared
+input is NaN, including one no tree uses. The nogap file still declares `gap_n_bad` (the chain registers 258 inputs); it
+must be filled even though it is not used. The chain fills all of them; this matters only for hand-built inputs.
+
+The chain files are written by `release/wirecell/make_chain_weights.py` (from the wcgpu1 session); their checksums are in
+each manifest under `wirecell`. Checks:
+- full chain on 10 MC files (wcgpu1): level-1 values within 6e-08 of the standalone release, `nue_score` within 7e-07;
+- the toolkit's own evaluators on 300 production candidates from Aurora (wcgpu1): within 4e-07 (level 1) and 4e-06
+  (final, same level-1 inputs);
+- an independent evaluator, `release/wirecell/check_chain_xml.py`, on the same 300 (Aurora): the same bounds, none over 1e-05.
+
+A candidate can move by up to ~0.05 when a last-bit difference in one level-1 value crosses a split of the final model;
+this matters only within ~0.05 of the cut. Use the same toolkit version the tables were built with (0.38.0): another
+version reconstructs different inputs.
 
 ## How they were trained (common to all three)
 

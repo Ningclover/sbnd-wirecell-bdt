@@ -880,5 +880,43 @@
   }
  },
  "operating_cut": 3.23,
- "operating_point": "82 % nueCC purity on the Fermilab evaluation samples of WCLocal2026Nov16 (gpvm, 2026-11-19)"
+ "operating_point": "82 % nueCC purity on the Fermilab evaluation samples of WCLocal2026Nov16 (gpvm, 2026-11-19)",
+ "wirecell": {
+  "converter": "release/wirecell/make_chain_weights.py (from wcgpu, bdt-comm wcgpu/release, issue #22)",
+  "use": "put wirecell/<variant> in front of wire-cell-data on WIRECELL_PATH; the 16 files replace the shipped \u03bde models by name, every other model resolves to the shipped file; no toolkit or configuration change",
+  "final_score": "nue_score = raw margin of the final model (scale ln(10)/2); the operating cut applies to it directly; -15 = tagger not run",
+  "warning": "TmvaGradForest returns -999 (nue_score -16.2556) if ANY declared input is NaN, including one no tree tests; fill all 258 declared inputs",
+  "variants": {
+   "main": {
+    "dir": "wirecell/main",
+    "weights_dir": "wirecell/main/uboone/weights",
+    "n_files": 16,
+    "sha256": {
+     "XGB_nue_seed2_0923.xml": "541f7eca58e9e52d0d6f6b651462a523bd5190e421f7bab72ebace7b008172e0",
+     "br3_3_BDT.weights.xml": "074d240f78f3977760b04d5d8ebb3d6a5248f1170f706937695b120423fef960",
+     "br3_5_BDT.weights.xml": "0e634e96affeddae7c55c4bf1d9d4fa04d9ee71c0d65d913354530e36eae6492",
+     "br3_6_BDT.weights.xml": "2a598fc8afd19d79ad685c4c5c1428cea995319331f805ae873592135b5451dd",
+     "lol_1_BDT.weights.xml": "ffa4c6a7146b98f4d45c95a1a8dbcb73d412afee2b1a77c0fc9c0b6d0df9fc62",
+     "lol_2_BDT.weights.xml": "0ae18c7ac2167be69033a5e0c6bc097e25246607ca5186528bbbc15b2eda22b1",
+     "pio_2_BDT.weights.xml": "6d9775c4948375277998f9cc61dec67d503dac3cc69f8c1c5d4d90ceb4c7563a",
+     "sig_1_BDT.weights.xml": "b1c0780465a21dbf974ca5ac449ae55b9242258c5d80a99de16ba6bd3dce7d16",
+     "sig_2_BDT.weights.xml": "c04224c7494a78286bd76fb5af6d35820df993de2bc3d645d49349aeed8d50a9",
+     "stw_2_BDT.weights.xml": "89d649a19f0f1a27db2b9099c719f95b456a7f16794981fa843a4189dcae24df",
+     "stw_3_BDT.weights.xml": "87d111cf66000362feb1c33acb35184a693877ab6ccfef200e360736385a11a8",
+     "stw_4_BDT.weights.xml": "0fde7f39a5ea4c4c859087605b777f601768ecafe468fc0ae121de21dd8ebf3b",
+     "tro_1_BDT.weights.xml": "a2a0e0efeaeac545a9692561d6ac843b2726b5f2c76781c9570e467f0a941129",
+     "tro_2_BDT.weights.xml": "03ea6f504ced7a40e5cab91fc4e3c042dc6d43f766a862729d23f6059a54cffd",
+     "tro_4_BDT.weights.xml": "26113da62ec27564f05a00814fbc49dcd15e22b050118eaa6695499ef97227bc",
+     "tro_5_BDT.weights.xml": "cb1b4f43cba791501db7d86ab191992c31018e75ad50843754a2a24ef84bb4e4"
+    },
+    "final_inputs_declared": 258,
+    "final_declared_but_unused": []
+   }
+  },
+  "checks": [
+   "wcgpu chain test (#22): 4 candidates, level 1 within 5.96e-08, nue_score within 7.15e-07",
+   "wcgpu toolkit evaluators on 300 Aurora candidates (#29): level 1 within 3.9e-07, final within 3.9e-06 on the same level-1 values",
+   "Aurora independent evaluator release/wirecell/check_chain_xml.py on the same 300: level 1 within 3.9e-07, final within 3.9e-06, none over 1e-05"
+  ]
+ }
 }
