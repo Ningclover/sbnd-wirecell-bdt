@@ -1,0 +1,153 @@
+{
+ "release": "nue_round4_ruleA_v2",
+ "variant": "main",
+ "frozen_utc": "2026-11-19T23:24:19Z",
+ "files": {
+  "br3_3": {
+   "xml": "br3_3_BDT.weights.xml",
+   "trees": 253,
+   "inputs": 4,
+   "scale": 0.11862613046994068,
+   "offset": 1.4142446114086915,
+   "empty_value": 0.3,
+   "mb": 0.27
+  },
+  "br3_5": {
+   "xml": "br3_5_BDT.weights.xml",
+   "trees": 445,
+   "inputs": 10,
+   "scale": 0.08752126420272988,
+   "offset": 1.4636349933612962,
+   "empty_value": 0.42,
+   "mb": 0.56
+  },
+  "br3_6": {
+   "xml": "br3_6_BDT.weights.xml",
+   "trees": 70,
+   "inputs": 7,
+   "scale": 0.08494065950504573,
+   "offset": 1.820590129367492,
+   "empty_value": 0.75,
+   "mb": 0.05
+  },
+  "pio_2": {
+   "xml": "pio_2_BDT.weights.xml",
+   "trees": 319,
+   "inputs": 4,
+   "scale": 0.10116921705721024,
+   "offset": 1.3816578026962096,
+   "empty_value": 0.2,
+   "mb": 0.43
+  },
+  "stw_2": {
+   "xml": "stw_2_BDT.weights.xml",
+   "trees": 28,
+   "inputs": 5,
+   "scale": 0.11539256759811313,
+   "offset": 1.7201420145474358,
+   "empty_value": 0.7,
+   "mb": 0.03
+  },
+  "stw_3": {
+   "xml": "stw_3_BDT.weights.xml",
+   "trees": 42,
+   "inputs": 4,
+   "scale": 0.10736071161662962,
+   "offset": 1.5472383994437453,
+   "empty_value": 0.5,
+   "mb": 0.04
+  },
+  "stw_4": {
+   "xml": "stw_4_BDT.weights.xml",
+   "trees": 367,
+   "inputs": 3,
+   "scale": 0.08120341442448699,
+   "offset": 1.789089218175477,
+   "empty_value": 0.7,
+   "mb": 0.19
+  },
+  "sig_1": {
+   "xml": "sig_1_BDT.weights.xml",
+   "trees": 25,
+   "inputs": 4,
+   "scale": 0.15657375623375766,
+   "offset": 1.5794067861397514,
+   "empty_value": 0.59,
+   "mb": 0.03
+  },
+  "sig_2": {
+   "xml": "sig_2_BDT.weights.xml",
+   "trees": 58,
+   "inputs": 5,
+   "scale": 0.16569378669175533,
+   "offset": 1.5786397818241786,
+   "empty_value": 0.55,
+   "mb": 0.08
+  },
+  "lol_1": {
+   "xml": "lol_1_BDT.weights.xml",
+   "trees": 175,
+   "inputs": 4,
+   "scale": 0.056205383254088824,
+   "offset": 2.0286929513844227,
+   "empty_value": 0.85,
+   "mb": 0.14
+  },
+  "lol_2": {
+   "xml": "lol_2_BDT.weights.xml",
+   "trees": 81,
+   "inputs": 7,
+   "scale": 0.1135351844466591,
+   "offset": 1.6963690085042356,
+   "empty_value": 0.7,
+   "mb": 0.1
+  },
+  "tro_1": {
+   "xml": "tro_1_BDT.weights.xml",
+   "trees": 62,
+   "inputs": 10,
+   "scale": 0.08199949725775277,
+   "offset": 1.348452630640809,
+   "empty_value": 0.28,
+   "mb": 0.12
+  },
+  "tro_2": {
+   "xml": "tro_2_BDT.weights.xml",
+   "trees": 62,
+   "inputs": 5,
+   "scale": 0.10569830368988531,
+   "offset": 1.3612913283683006,
+   "empty_value": 0.35,
+   "mb": 0.1
+  },
+  "tro_4": {
+   "xml": "tro_4_BDT.weights.xml",
+   "trees": 46,
+   "inputs": 11,
+   "scale": 0.08725523481460383,
+   "offset": 1.205549182199858,
+   "empty_value": 0.33,
+   "mb": 0.09
+  },
+  "tro_5": {
+   "xml": "tro_5_BDT.weights.xml",
+   "trees": 113,
+   "inputs": 8,
+   "scale": 0.18764733331678113,
+   "offset": 1.4051800415909796,
+   "empty_value": 0.5,
+   "mb": 0.15
+  },
+  "level2": {
+   "xml": "XGB_nue_seed2_0923.xml",
+   "variant": "main",
+   "trees": 116,
+   "inputs_declared": 258,
+   "declared_but_unused": [],
+   "inputs": 258,
+   "scale": 1.151292546497023,
+   "offset": 0.0,
+   "mb": 6.39
+  }
+ }
+}

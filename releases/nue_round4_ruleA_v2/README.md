@@ -1,5 +1,7 @@
 # SBND Wire-Cell νe CC BDT, round 4, rule A, v2: chain version (2026-11-19)
 
+**The default model** (2026-11-20): `wirecell/main/`, cut 3.06. `wirecell/nogap/` (A-nogap v2) and `../nue_round4_ruleB_v2/` are kept as alternatives.
+
 The version of `../nue_round4_ruleA/` that runs in the Wire-Cell chain with **no toolkit change** (issue #22).
 
 - **Small models (`l1/`): byte-identical to v1.** wcgpu converts them to TMVA XML with a per-model rescale
@@ -17,3 +19,12 @@ The version of `../nue_round4_ruleA/` that runs in the Wire-Cell chain with **no
 Scoring from the builder's tables, with the transform applied from the manifest:
 `python release/score_release.py releases/nue_round4_ruleA_v2 TABLE_DIR SAMPLE [--variant nogap]`.
 It reproduces the training-time development scores bit for bit (nuecc and BNB).
+
+## Inside the Wire-Cell chain (added 2026-11-20)
+
+`wirecell/<variant>/uboone/weights/` (variants: main, nogap) holds the 16 files wire-cell-toolkit reads, under the shipped names.
+Put `wirecell/<variant>` in front of `wire-cell-data` on `WIRECELL_PATH`; nothing else changes. `nue_score` is then the
+raw margin, so the operating cut in the manifest applies directly. Every declared input must be filled: one NaN makes
+the toolkit return `nue_score` = −16.2556. Written by `release/wirecell/make_chain_weights.py`; checksums and the checks
+(chain test, 300 production candidates scored with the toolkit's own evaluators and with an independent one) are in
+`manifest.json` under `wirecell`. See `releases/README.md`, "Inside the Wire-Cell chain".
