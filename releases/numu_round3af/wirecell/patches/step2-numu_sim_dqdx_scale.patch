@@ -1,0 +1,33 @@
+diff --git a/aurora/bin/step2.sh b/aurora/bin/step2.sh
+index 3572961..2b43d00 100755
+--- a/aurora/bin/step2.sh
++++ b/aurora/bin/step2.sh
+@@ -21,6 +21,9 @@ VM_TLA=(); [ -n "${WC_VERTEX_METHOD:-}" ] && VM_TLA=(--tla-str vertex_method="$W
+ # numbers restart at 1 in every subrun) -- run_pair.py sets WC_EVT_SUBDIR=pr_evt{run}_{subrun}_{event}
+ # for those.  Every name must start with pr_evt (collect-good.py, the keep modes, this script).
+ SUBDIR=${WC_EVT_SUBDIR:-pr_evt%1%}
++# SBND numu round 3: NUMU_SIM_DQDX_SCALE, when set, is passed as the numu_sim_dqdx_scale TLA (the toolkit
++# applies it to the numu BDT dQ/dx inputs on simulation only).  Unset => not passed, older toolkits run unchanged.
++NUMU_TLA=(); [ -n "${NUMU_SIM_DQDX_SCALE:-}" ] && NUMU_TLA=(--tla-code numu_sim_dqdx_scale="$NUMU_SIM_DQDX_SCALE")
+ # ai-helper issue 41: reco<->truth matching trees on MC (needs the step-1 labeler's
+ # truth_track table; written nowhere else).  WC_TRUTH_MATCH=0 turns it off.
+ TM=false; [ "$REAL" = sim ] && [ "${WC_TRUTH_MATCH:-1}" = 1 ] && TM=true
+@@ -31,7 +34,7 @@ python3 -c "import importlib.util as u, sys; sys.exit(0 if all(u.find_spec(m) fo
+ wire-cell -l stdout -L debug -c pgrapher/experiment/sbnd/wct-pr.jsonnet \
+   --tla-str input="$TAR" --tla-str reality="$REAL" \
+   --tla-str evt_subdir="$SUBDIR" \
+-  ${VM_TLA[@]+"${VM_TLA[@]}"} --tla-code dl_vtx_dump="$DUMP" ${SPACE_TLA[@]+"${SPACE_TLA[@]}"} --tla-code flat_tree=true --tla-code truth_match=$TM > wct.log 2>&1
++  ${VM_TLA[@]+"${VM_TLA[@]}"} ${NUMU_TLA[@]+"${NUMU_TLA[@]}"} --tla-code dl_vtx_dump="$DUMP" ${SPACE_TLA[@]+"${SPACE_TLA[@]}"} --tla-code flat_tree=true --tla-code truth_match=$TM > wct.log 2>&1
+ rc=$?
+ grep -c "DL vertex failed" wct.log > dl_fail
+ grep -c "RootFlatTreeVisitor.*no recTreeWireCell written" wct.log > flat_fail
+diff --git a/aurora/site/aurora.sh b/aurora/site/aurora.sh
+index aa19f58..053d026 100644
+--- a/aurora/site/aurora.sh
++++ b/aurora/site/aurora.sh
+@@ -12,4 +12,4 @@ export WC_SYS_MIN_AVAIL_GB=${WC_SYS_MIN_AVAIL_GB:-50}
+ export WC_KRB_WAIT=0
+ # The wrapper runs apptainer --cleanenv: the per-step knobs run_pair.py / the steps read from the
+ # environment must be forwarded explicitly (only those that are set are).
+-export PASS_ENV="${PASS_ENV:-} WC_EVT_SUBDIR WCLS_INPUT_FILE DLVTX_DUMP DLVTX_SPACE WC_TRUTH_MATCH WC_OPT WC_WCT_SRC WC_VERTEX_METHOD WC_DV2_BUNDLE GODEBUG"
++export PASS_ENV="${PASS_ENV:-} WC_EVT_SUBDIR WCLS_INPUT_FILE DLVTX_DUMP DLVTX_SPACE WC_TRUTH_MATCH WC_OPT WC_WCT_SRC WC_VERTEX_METHOD WC_DV2_BUNDLE GODEBUG NUMU_SIM_DQDX_SCALE"

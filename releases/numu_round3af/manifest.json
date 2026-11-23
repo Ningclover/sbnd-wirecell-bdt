@@ -374,7 +374,8 @@
   "written_by": "training/numu/make_numu_chain_weights.py",
   "checks": [
    "independent TMVA evaluator (training/numu/check_numu_chain_xml.py) vs xgboost on 328,698 candidates (corrected bnb, ncdr, beam-off-train): small models max |diff| 5.5e-07; final model with the same small-model values 7.7e-06 on numu_score; full path pass/fail differs on 4 candidates",
-   "pending: full chain and toolkit evaluators (wcgpu1)"
-  ]
+   "full chain passed 2026-11-23: BNB simulation with numu_sim_dqdx_scale=1.071 in the chain (82 and 31 candidates, numu_score within 6e-06, pass/fail identical 44/44 and 25/25) and beam-on data without correction (34 candidates, 22/22); all other outputs identical to production; checks/chain/"
+  ],
+  "simulation_patch": "wirecell/patches/wct-0.38.0-numu_sim_dqdx_scale.patch (toolkit 0.38.0; TLA numu_sim_dqdx_scale, sim only) and wirecell/patches/step2-numu_sim_dqdx_scale.patch (Aurora workflow)"
  }
 }

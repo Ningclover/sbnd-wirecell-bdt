@@ -41,10 +41,11 @@ Every prediction made with this model must use simulation corrected as it was tr
 `training/numu/make_corrected_tables.py MERGED OUT correction.json --samples <simulated samples> --update-flag1` writes a
 corrected copy of the table builder's tables.
 
-**Inside the chain on simulation, the charge is not corrected.** The toolkit computes the inputs from the reconstructed
-charge. With the uncorrected BNB simulation the number of candidates selected changes by only +0.09 % (171,651 against
-171,494). However, 9,049 of 302,172 candidates move across the cut one way or the other. For predictions, score simulation
-from corrected tables, as the evaluation did. Data can be scored directly by the chain.
+**Inside the chain, simulation must be corrected the same way.** The toolkit computes the inputs from the reconstructed
+charge. Without the correction the number of selected BNB simulation candidates hardly changes (+0.09 %: 171,651 against
+171,494), but 9,049 of 302,172 candidates move across the cut. The patch below applies the correction inside the chain, on
+simulation only (see "Use it in Wire-Cell"). Without the patch, score simulation from corrected tables, as the evaluation
+did. Data is never corrected and can be scored directly by the chain.
 
 ## Use it in Wire-Cell
 
@@ -62,6 +63,17 @@ configuration names them in `cfg/pgrapher/experiment/sbnd/clus.jsonnet`:
 in front of `wire-cell-data` on `WIRECELL_PATH`. Every other weight file still comes from `wire-cell-data`.
 
 **Select νμ CC with `numu_score > 0.985`** for 95 % purity. `numu_score` is on the shipped scale.
+
+**Simulation: apply the charge correction in the chain.** Toolkit 0.38.0 needs `wirecell/patches/wct-0.38.0-numu_sim_dqdx_scale.patch`
+(`git am` in wire-cell-toolkit, then rebuild):
+- `UbooneNumuBDTScorer` gets the setting `numu_sim_dqdx_scale` (default 1 = off, output unchanged).
+- It scales the seven dQ/dx inputs by the factor in the copies handed to the νμ BDTs, and switches `numu_cc_flag` off as
+  `make_corrected_tables.py --update-flag1` does. The stored tagger values stay raw.
+- `wct-pr.jsonnet` takes it as a TLA, and `sbnd/clus.jsonnet` passes it only when `reality == 'sim'`. Run simulation with
+  `--tla-str reality=sim --tla-code numu_sim_dqdx_scale=1.071`, and data with `reality=data` (always 1).
+- For the Aurora production workflow (`sbnd-wirecell-production`), `wirecell/patches/step2-numu_sim_dqdx_scale.patch` turns
+  the environment variable `NUMU_SIM_DQDX_SCALE` into that TLA and passes it into the container.
+- The job log shows `UbooneNumuBDTScorer: simulation dQ/dx scale 1.071 ...` on simulation.
 
 How the files are written (`training/numu/make_numu_chain_weights.py`):
 - **Small models:** each file holds the model's trees with the scale and offset of `manifest.json`. The chain then stores
@@ -83,7 +95,26 @@ of the corrected BNB simulation, the NC sample and the beam-off training data (3
 A last-bit float difference in a small-model value can cross a split of the final model. That moves about 1 % of
 candidates by up to 0.3 in `numu_score`, but almost never across the cut.
 
-**Pending: the full-chain test and the toolkit's own evaluators (wcgpu1), as were done for round 1.**
+**Full-chain test: passed (2026-11-23).** The chain was run with these files and the patch. Production step 1 was reused
+and step 2 rerun with the production settings. Its stored scores were then compared with the release scored from the
+builder's tables of the same output (`training/numu/compare_chain_vs_table.py`; simulation tables corrected first). Results
+in `checks/chain/`:
+
+| test | candidates | max \|diff\| `numu_score` | pass at 0.985: chain / table / differ |
+|---|---:|---:|---|
+| BNB simulation, ×1.071 in the chain (Aurora, 2 files) | 82 | 4.5e-06 | 44 / 44 / 0 |
+| BNB simulation, ×1.071 in the chain (Fermilab, 2 files), against the evaluation's own scores | 31 | 6.0e-06 | 25 / 25 / 0 |
+| beam-on data, no correction (Fermilab, 1 file) | 34 | 2.4e-06 (one candidate 0.083, far below the cut) | 22 / 22 / 0 |
+
+- The small-model scores agree to within 1.8e-07.
+- **The correction really acts:** against uncorrected tables, the same simulation output differs on 69 of 82 and 28 of 31
+  candidates (up to 2.3 in `numu_score`).
+- A candidate whose `numu_cc_flag` the correction switches off is reproduced as well.
+- **Every other chain output is unchanged:** against the production files (shipped weights), all other candidate columns
+  and all small-model input tables are identical, including the raw dQ/dx values.
+- The one larger difference on data is the last-bit effect described above.
+
+Not done: the toolkit's own standalone evaluators on table rows (wcgpu1). The full chain covers what they would test.
 
 ## Use it outside Wire-Cell
 

@@ -1,0 +1,170 @@
+From 7a9636d5ac2d676c955e13db6f6395562720ad38 Mon Sep 17 00:00:00 2001
+From: Xuyang Ning <xning@bnl.gov>
+Date: Mon, 23 Nov 2026 19:20:22 +0000
+Subject: [PATCH] UbooneNumuBDTScorer: numu_sim_dqdx_scale (sim only) for the
+ SBND numu round 3 BDTs
+
+Scales numu_cc_1_medium_dQ_dx and cosmict_{2,3,7}_dQ_dx_{end,front} (filled, > 0) on the copies handed to
+the numu BDTs and switches numu_cc_flag off when no numu_1 segment flag survives the scaled dQ/dx cut (and
+no numu_cc_2 flag, no numu_cc_flag_3), as the training tables were made. Default 1 = off; the SBND config
+sets it only when reality == 'sim' (TLA numu_sim_dqdx_scale of wct-pr.jsonnet).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ cfg/pgrapher/common/clus.jsonnet            |  5 ++++-
+ cfg/pgrapher/experiment/sbnd/clus.jsonnet   |  7 +++++--
+ cfg/pgrapher/experiment/sbnd/wct-pr.jsonnet |  4 +++-
+ root/inc/WireCellRoot/UbooneNumuBDTScorer.h | 11 ++++++++++
+ root/src/UbooneNumuBDTScorer.cxx            | 23 ++++++++++++++++++++-
+ 5 files changed, 45 insertions(+), 5 deletions(-)
+
+diff --git a/cfg/pgrapher/common/clus.jsonnet b/cfg/pgrapher/common/clus.jsonnet
+index 91d19e73..b2cd1b94 100644
+--- a/cfg/pgrapher/common/clus.jsonnet
++++ b/cfg/pgrapher/common/clus.jsonnet
+@@ -762,7 +762,8 @@ clustering_recovering_bundle(name="", graph_name="relaxed") :: {
+                         numu3_weights_xml="",
+                         cosmict10_weights_xml="",
+                         numu_xgboost_xml="",
+-                        fast_xgb_forest=false) :: {
++                        fast_xgb_forest=false,
++                        numu_sim_dqdx_scale=1.0) :: {
+             type: "UbooneNumuBDTScorer",
+             name: prefix + name,
+             data: {
+@@ -773,6 +774,8 @@ clustering_recovering_bundle(name="", graph_name="relaxed") :: {
+                 cosmict10_weights_xml: cosmict10_weights_xml,
+                 numu_xgboost_xml:     numu_xgboost_xml,
+                 [if fast_xgb_forest then 'fast_xgb_forest']: true,
++                // simulation charge correction of the numu BDT inputs (SBND numu round 3); key omitted at 1
++                [if numu_sim_dqdx_scale != 1.0 then 'numu_sim_dqdx_scale']: numu_sim_dqdx_scale,
+             }
+         },
+ 
+diff --git a/cfg/pgrapher/experiment/sbnd/clus.jsonnet b/cfg/pgrapher/experiment/sbnd/clus.jsonnet
+index 832c43a9..8f88f176 100644
+--- a/cfg/pgrapher/experiment/sbnd/clus.jsonnet
++++ b/cfg/pgrapher/experiment/sbnd/clus.jsonnet
+@@ -893,7 +893,7 @@ local clus_all_apa(anodes, dump, output_dir, runNo, subRunNo, eventNo, all_apa_b
+ // the configured runNo/eventNo auto-increment.  Used by the bundled standalone chain
+ // (one wire-cell call over many events) whose ident already carries the real event
+ // id.  Default false keeps production byte-identical (the key is omitted).
+-function(output_dir='.', runNo=0, subRunNo=0, eventNo=0, rse_from_ident=false, rse_from_metadata=false, pre_mabc=null, event_from_ident=false, rse_map={}, evt_subdir='', reality='data') {
++function(output_dir='.', runNo=0, subRunNo=0, eventNo=0, rse_from_ident=false, rse_from_metadata=false, pre_mabc=null, event_from_ident=false, rse_map={}, evt_subdir='', reality='data', numu_sim_dqdx_scale=1.0) {
+     // Output prefix for the per-event writers: output_dir/ normally, and
+     // output_dir/<evt_subdir>/ when a group runs in one process (see the
+     // evt_subdir doc above).
+@@ -2987,7 +2987,10 @@ function(output_dir='.', runNo=0, subRunNo=0, eventNo=0, rse_from_ident=false, r
+                 numu3_weights_xml=     bdt_weights_dir + '/numu_tagger3.weights.xml',
+                 cosmict10_weights_xml= bdt_weights_dir + '/cos_tagger_10.weights.xml',
+                 numu_xgboost_xml=      numu_xgboost_xml,
+-                fast_xgb_forest=fast_xgb_forest),
++                fast_xgb_forest=fast_xgb_forest,
++                // SBND numu round 3: the BDTs were trained on simulation whose dQ/dx inputs were scaled
++                // towards data; the same scale goes on simulation here, never on data
++                numu_sim_dqdx_scale=(if reality == 'sim' then numu_sim_dqdx_scale else 1.0)),
+             nue_bdt_scorer: cm.nue_bdt_scorer(
+                 mipid_weights_xml=       bdt_weights_dir + '/mipid_BDT.weights.xml',
+                 gap_weights_xml=         bdt_weights_dir + '/gap_BDT.weights.xml',
+diff --git a/cfg/pgrapher/experiment/sbnd/wct-pr.jsonnet b/cfg/pgrapher/experiment/sbnd/wct-pr.jsonnet
+index 5b8e0c47..9651f7ac 100644
+--- a/cfg/pgrapher/experiment/sbnd/wct-pr.jsonnet
++++ b/cfg/pgrapher/experiment/sbnd/wct-pr.jsonnet
+@@ -29,6 +29,7 @@
+ function(input='qlpctree.tar.gz',
+          output_dir='.',
+          reality='data',
++         numu_sim_dqdx_scale=1.0,  // SBND numu round 3: simulation dQ/dx scale for the numu BDT inputs (sim only)
+          evt_subdir='pr_evt%1%',
+          enable_tracking_root=true,
+          bee_outname='mabc-pr.zip',
+@@ -74,7 +75,8 @@ local clus = import 'pgrapher/experiment/sbnd/clus.jsonnet';
+ // MABC's precedence is metadata > ident > config.
+ local clus_maker = clus(output_dir=output_dir, rse_from_ident=true, rse_from_metadata=true,
+                         event_from_ident=evt_subdir != '',
+-                        reality=reality, evt_subdir=evt_subdir);
++                        reality=reality, evt_subdir=evt_subdir,
++                        numu_sim_dqdx_scale=numu_sim_dqdx_scale);
+ local pr_stage = import 'pgrapher/experiment/sbnd/sbnd-pr-stage.jsonnet';
+ 
+ local source = g.pnode({
+diff --git a/root/inc/WireCellRoot/UbooneNumuBDTScorer.h b/root/inc/WireCellRoot/UbooneNumuBDTScorer.h
+index 6443edfb..65306557 100644
+--- a/root/inc/WireCellRoot/UbooneNumuBDTScorer.h
++++ b/root/inc/WireCellRoot/UbooneNumuBDTScorer.h
+@@ -13,6 +13,7 @@
+ #ifndef WIRECELLROOT_UBOONENUMUBDTSCORER_H
+ #define WIRECELLROOT_UBOONENUMUBDTSCORER_H
+ 
++#include <cmath>
+ #include "WireCellClus/IEnsembleVisitor.h"
+ #include "WireCellIface/IConfigurable.h"
+ #include "WireCellClus/NeutrinoTaggerInfo.h"
+@@ -82,6 +83,16 @@ namespace WireCell {
+             /// score, far cheaper to load.  See UbooneNueBDTScorer.h and
+             /// sbnd_xin/docs/76 round 2.  The four sub-BDTs stay on TMVA.
+             bool m_fast_xgb_forest{false};
++            /// numu_sim_dqdx_scale (default 1 = off).  SBND numu round 3: the BDTs were trained on
++            /// simulation whose seven dQ/dx inputs (numu_cc_1_medium_dQ_dx per segment,
++            /// cosmict_{2,3,7}_dQ_dx_{end,front}) were scaled by this factor towards data, and whose
++            /// numu_cc_flag follows the scaled numu_1 dQ/dx.  The configuration sets it on simulation
++            /// only.  Applied to the copies handed to the BDTs; TaggerInfo keeps the raw values.
++            double m_sim_dqdx_scale{1.0};
++            float scaled_dqdx(float q) const {
++                return (m_sim_dqdx_scale != 1.0 && std::isfinite(q) && q > 0)
++                    ? static_cast<float>(static_cast<double>(q) * m_sim_dqdx_scale) : q;
++            }
+             mutable std::unique_ptr<TmvaGradForest> m_xgb_forest;
+             mutable std::vector<std::string> m_xgb_names;
+             mutable std::vector<const float*> m_xgb_ptrs;
+diff --git a/root/src/UbooneNumuBDTScorer.cxx b/root/src/UbooneNumuBDTScorer.cxx
+index 3939e08b..253ffaa5 100644
+--- a/root/src/UbooneNumuBDTScorer.cxx
++++ b/root/src/UbooneNumuBDTScorer.cxx
+@@ -52,6 +52,10 @@ void UbooneNumuBDTScorer::configure(const WireCell::Configuration& cfg)
+     m_numu_xgboost_xml = resolve(get<std::string>(cfg, "numu_xgboost_xml",      ""));
+     // C++ default false = TMVA::Reader books the XGB combiner (legacy).
+     m_fast_xgb_forest = get<bool>(cfg, "fast_xgb_forest", m_fast_xgb_forest);
++    m_sim_dqdx_scale = get<double>(cfg, "numu_sim_dqdx_scale", 1.0);
++    if (m_sim_dqdx_scale != 1.0)
++        log->info("UbooneNumuBDTScorer: simulation dQ/dx scale {} on the numu BDT inputs "
++                  "(numu_cc_1_medium_dQ_dx, cosmict_2/3/7 dQ_dx end/front) and numu_cc_flag", m_sim_dqdx_scale);
+ 
+     // Readers are booked lazily by ensure_readers() on the first scoring
+     // visit (see the header note) -- nothing else to do here.
+@@ -387,7 +391,7 @@ float UbooneNumuBDTScorer::cal_numu_1_bdt(Clus::PR::TaggerInfo& ti, float defaul
+             (void)ti.numu_cc_flag_1.at(i); // loaded but not used as BDT input variable
+             m_numu1_particle_type    = ti.numu_cc_1_particle_type.at(i);
+             m_numu1_length           = ti.numu_cc_1_length.at(i);
+-            m_numu1_medium_dQ_dx     = ti.numu_cc_1_medium_dQ_dx.at(i);
++            m_numu1_medium_dQ_dx     = scaled_dqdx(ti.numu_cc_1_medium_dQ_dx.at(i));
+             m_numu1_dQ_dx_cut        = ti.numu_cc_1_dQ_dx_cut.at(i);
+             m_numu1_direct_length    = ti.numu_cc_1_direct_length.at(i);
+             m_numu1_n_daughter_tracks = ti.numu_cc_1_n_daughter_tracks.at(i);
+@@ -577,6 +581,23 @@ void UbooneNumuBDTScorer::cal_numu_bdts_xgboost(Clus::PR::TaggerInfo& ti,
+     m_xgb_vars[73] = ti.numu_2_score;
+ 
+     // Guard against NaN inputs that can cause TMVA to crash.
++    // SBND numu round 3 simulation correction (off at scale 1): the six cosmict dQ/dx inputs where
++    // their tagger is filled, and numu_cc_flag = any numu_1 segment flag (still on with the scaled
++    // dQ/dx below its cut) OR any numu_cc_2 flag OR numu_cc_flag_3 -- only ever switched off, as the
++    // training tables were (make_corrected_tables.py --update-flag1).
++    if (m_sim_dqdx_scale != 1.0) {
++        if (ti.cosmict_2_filled == 1) { m_xgb_vars[16] = scaled_dqdx(m_xgb_vars[16]); m_xgb_vars[17] = scaled_dqdx(m_xgb_vars[17]); }
++        if (ti.cosmict_3_filled == 1) { m_xgb_vars[31] = scaled_dqdx(m_xgb_vars[31]); m_xgb_vars[32] = scaled_dqdx(m_xgb_vars[32]); }
++        if (ti.cosmict_7_filled == 1) { m_xgb_vars[54] = scaled_dqdx(m_xgb_vars[54]); m_xgb_vars[55] = scaled_dqdx(m_xgb_vars[55]); }
++        bool any1_old = false, any1_new = false, any2 = false;
++        for (size_t i = 0; i < ti.numu_cc_flag_1.size(); ++i) {
++            if (ti.numu_cc_flag_1.at(i) != 1) continue;
++            any1_old = true;
++            if (scaled_dqdx(ti.numu_cc_1_medium_dQ_dx.at(i)) < ti.numu_cc_1_dQ_dx_cut.at(i)) any1_new = true;
++        }
++        for (float f : ti.numu_cc_flag_2) if (f == 1) any2 = true;
++        if (any1_old && !any1_new && !any2 && ti.numu_cc_flag_3 != 1) m_xgb_vars[67] = 0;
++    }
+     if (std::isnan(m_xgb_vars[24])) m_xgb_vars[24] = 0; // cosmict_4_angle_beam
+     if (std::isnan(m_xgb_vars[52])) m_xgb_vars[52] = 0; // cosmict_7_angle_beam
+     if (std::isnan(m_xgb_vars[56])) m_xgb_vars[56] = 0; // cosmict_7_theta
+-- 
+2.43.0
+
