@@ -1,0 +1,63 @@
+{
+ "release": "numu_round3af",
+ "files": {
+  "numu_1": {
+   "xml": "numu_tagger1.weights.xml",
+   "trees": 692,
+   "inputs": [
+    "numu_cc_1_particle_type",
+    "numu_cc_1_length",
+    "numu_cc_1_medium_dQ_dx",
+    "numu_cc_1_dQ_dx_cut",
+    "numu_cc_1_direct_length",
+    "numu_cc_1_n_daughter_tracks",
+    "numu_cc_1_n_daughter_all"
+   ],
+   "scale": 0.02804971050277742,
+   "offset": 1.9070490688722377,
+   "empty_value": -0.4,
+   "pool": "max",
+   "sha256": "1af283ddb28a54f823f82896cc68856336ea3101163dab9c0e5a73d5ee7edc92"
+  },
+  "numu_2": {
+   "xml": "numu_tagger2.weights.xml",
+   "trees": 115,
+   "inputs": [
+    "numu_cc_2_length",
+    "numu_cc_2_total_length",
+    "numu_cc_2_n_daughter_tracks",
+    "numu_cc_2_n_daughter_all"
+   ],
+   "scale": 0.3139434741996274,
+   "offset": 2.0875163090543887,
+   "empty_value": -0.1,
+   "pool": "max",
+   "sha256": "a129aaad2950564d717b4769abe043c67f17b3a46d5b10801135c418ba10592f"
+  },
+  "cosmict_10": {
+   "xml": "cos_tagger_10.weights.xml",
+   "trees": 28,
+   "inputs": [
+    "cosmict_10_vtx_z",
+    "cosmict_10_flag_shower",
+    "cosmict_10_flag_dir_weak",
+    "cosmict_10_angle_beam",
+    "cosmict_10_length"
+   ],
+   "scale": 0.10762947971554067,
+   "offset": 1.6446853511274164,
+   "empty_value": 0.7,
+   "pool": "min",
+   "sha256": "8405c13c5e3129a9d4a4beeb8cdf009371dcbb13f36cdf332e613bce28c0f1b9"
+  },
+  "final": {
+   "xml": "numu_scalars_scores_0923.xml",
+   "model": "d6_f0",
+   "trees": 472,
+   "inputs": 74,
+   "scale": 1.0,
+   "offset": 0.0,
+   "sha256": "81fb26f88bb1aed30455ea5e55e6179f53b49bf6af4a36a119fbd181da6310b6"
+  }
+ }
+}

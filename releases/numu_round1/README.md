@@ -1,5 +1,7 @@
 # SBND Wire-Cell νμ CC BDT: round 1 (2026-11-20)
 
+> **Superseded on 2026-11-23 by [`../numu_round3af/`](../numu_round3af/README.md)**, which retrains all four νμ models on charge-corrected simulation. This release stays for comparison.
+
 A retrained final νμ BDT for SBND. It replaces the MicroBooNE weights of the toolkit's νμ tagger
 (`numu_scalars_scores_0923.xml`). Only the final, candidate-level model is new. The small per-object models (numu_1,
 numu_2, cosmict_10) are the shipped ones, so the chain computes every input exactly as before.

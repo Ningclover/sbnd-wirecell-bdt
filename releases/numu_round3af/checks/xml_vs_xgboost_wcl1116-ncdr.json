@@ -1,0 +1,32 @@
+{
+ "sample": "wcl1116-ncdr",
+ "release": "numu_round3af",
+ "checks": {
+  "numu_1": {
+   "objects": 29880,
+   "candidates_with_objects": 23982,
+   "max_abs_diff": 2.980232238769531e-07,
+   "below_empty": 0
+  },
+  "numu_2": {
+   "objects": 561,
+   "candidates_with_objects": 536,
+   "max_abs_diff": 5.513429641723633e-07,
+   "below_empty": 0
+  },
+  "cosmict_10": {
+   "objects": 271,
+   "candidates_with_objects": 172,
+   "max_abs_diff": 5.960464477539063e-08,
+   "below_empty": 0
+  },
+  "numu_score": {
+   "candidates": 24031,
+   "saturated": 0,
+   "max_abs_diff": 0.23500886814140637,
+   "pass_ref": 1501,
+   "pass_xml": 1501,
+   "pass_disagree": 0
+  }
+ }
+}

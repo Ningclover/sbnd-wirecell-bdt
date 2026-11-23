@@ -1,0 +1,32 @@
+{
+ "sample": "wcl1116-bnb",
+ "release": "numu_round3af",
+ "checks": {
+  "numu_1": {
+   "objects": 530676,
+   "candidates_with_objects": 296744,
+   "max_abs_diff": 4.172325134277344e-07,
+   "below_empty": 0
+  },
+  "numu_2": {
+   "objects": 38139,
+   "candidates_with_objects": 35669,
+   "max_abs_diff": 5.513429641723633e-07,
+   "below_empty": 0
+  },
+  "cosmict_10": {
+   "objects": 13377,
+   "candidates_with_objects": 9552,
+   "max_abs_diff": 5.960464477539063e-08,
+   "below_empty": 0
+  },
+  "numu_score": {
+   "candidates": 302172,
+   "saturated": 0,
+   "max_abs_diff": 0.3069101147291806,
+   "pass_ref": 171494,
+   "pass_xml": 171496,
+   "pass_disagree": 4
+  }
+ }
+}
