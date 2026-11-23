@@ -1,0 +1,32 @@
+{
+ "sample": "wcl1116-beam-off-train",
+ "release": "numu_round3af",
+ "checks": {
+  "numu_1": {
+   "objects": 1972,
+   "candidates_with_objects": 1527,
+   "max_abs_diff": 2.384185791015625e-07,
+   "below_empty": 0
+  },
+  "numu_2": {
+   "objects": 314,
+   "candidates_with_objects": 271,
+   "max_abs_diff": 5.513429641723633e-07,
+   "below_empty": 0
+  },
+  "cosmict_10": {
+   "objects": 197,
+   "candidates_with_objects": 101,
+   "max_abs_diff": 5.960464477539063e-08,
+   "below_empty": 0
+  },
+  "numu_score": {
+   "candidates": 2495,
+   "saturated": 0,
+   "max_abs_diff": 0.12975875036215712,
+   "pass_ref": 140,
+   "pass_xml": 140,
+   "pass_disagree": 0
+  }
+ }
+}

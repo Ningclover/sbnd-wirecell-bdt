@@ -9,9 +9,12 @@ vertex tree) and replace the MicroBooNE weights shipped with the toolkit.
 82 % purity. A-nogap v2 and B v2 are kept beside it for anyone who wants to compare; all three are frozen, checked in
 the chain and evaluated the same way (see "Inside the Wire-Cell chain" below).
 
-> **νμ CC BDT (2026-11-20): `numu_round1/`.** A retrained final νμ model for SBND: 80.1 % νμ CC efficiency at 95 %
-> purity against 75.0 % for the shipped weights, with the cut at `numu_score` 1.011. It is a drop-in replacement for
-> `numu_scalars_scores_0923.xml`, with the small models unchanged. See [`numu_round1/README.md`](numu_round1/README.md).
+> **νμ CC BDT, current release (2026-11-23): `numu_round3af/`.** All four νμ models retrained (numu_1, numu_2, cosmict_10
+> and the final model) on simulation whose dQ/dx inputs are scaled by 1.071 towards data, with the numu_1 muon flag
+> updated to match: 80.3 % νμ CC efficiency at 95 % purity against 75.0 % for the shipped weights, cut at `numu_score`
+> 0.985, beam-on data / prediction 1.063 (shipped 1.058). Drop-in Wire-Cell files under the shipped names. Predictions must
+> use the corrected simulation. See [`numu_round3af/README.md`](numu_round3af/README.md).
+> The previous νμ release, `numu_round1/` (final model only, cut 1.011, 80.1 %), is kept for comparison.
 
 ## The three models
 
