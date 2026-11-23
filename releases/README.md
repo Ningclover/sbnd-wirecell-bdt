@@ -12,8 +12,9 @@ the chain and evaluated the same way (see "Inside the Wire-Cell chain" below).
 > **νμ CC BDT, current release (2026-11-23): `numu_round3af/`.** All four νμ models retrained (numu_1, numu_2, cosmict_10
 > and the final model) on simulation whose dQ/dx inputs are scaled by 1.071 towards data, with the numu_1 muon flag
 > updated to match: 80.3 % νμ CC efficiency at 95 % purity against 75.0 % for the shipped weights, cut at `numu_score`
-> 0.985, beam-on data / prediction 1.063 (shipped 1.058). Drop-in Wire-Cell files under the shipped names. Predictions must
-> use the corrected simulation. See [`numu_round3af/README.md`](numu_round3af/README.md).
+> 0.985, beam-on data / prediction 1.063 (shipped 1.058). Drop-in Wire-Cell files under the shipped names, full-chain tested.
+> Simulation must be charge-corrected: in the chain with the included toolkit patch (simulation only), or in the tables.
+> See [`numu_round3af/README.md`](numu_round3af/README.md).
 > The previous νμ release, `numu_round1/` (final model only, cut 1.011, 80.1 %), is kept for comparison.
 
 ## The three models
